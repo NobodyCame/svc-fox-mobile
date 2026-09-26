@@ -1,0 +1,39 @@
+pluginManagement {
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "fabric-loom") {
+                useModule("net.fabricmc:fabric-loom:${requested.version}")
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "Fabric"
+            url = "https://maven.fabricmc.net/"
+        }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            name = "Fabric"
+            url = "https://maven.fabricmc.net/"
+        }
+        maven {
+            name = "Modrinth"
+            url = "https://api.modrinth.com/maven"
+        }
+        maven {
+            name = "MaxHenkel"
+            url = "https://maven.maxhenkel.de/repository/public"
+        }
+        mavenCentral()
+    }
+}
+
+rootProject.name = "svc-fox-mobile"
+
+

@@ -1,0 +1,53 @@
+.gradle/
+.gradle-user/
+.release-stage-*/
+build/
+out/
+.idea/
+*.iml
+*.ipr
+*.iws
+run/
+logs/
+crash-reports/
+
+# Local development snapshots and release artifacts
+work/
+release/
+libs/
+tools/*.jar
+SimpleVoiceCall-*-original.jar
+
+# Private administration/deployment material
+ops/
+backend/
+*.owner.py
+backend/*.service
+*.env
+.env*
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+
+# Runtime state, credentials, and local output
+__pycache__/
+*.py[cod]
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# Internal operations notes; publish only reviewed, user-facing docs
+docs/AI_PROJECT_GUIDE_RU.md
+docs/BUILD_STATUS.md
+docs/DEPLOYMENT_STATUS_*.md
+docs/FULL_AUDIT_*.md
+docs/FUTURE_ORACLE_*.md
+docs/ORIGINAL_*.md
+docs/PROJECT_MAP*.md
+docs/PROJECT_STATE_AND_HANDOFF.md
+docs/REMAP_PLAN.md

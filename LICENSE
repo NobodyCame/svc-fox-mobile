@@ -1,0 +1,39 @@
+Copyright (c) 2026 YukiiNoTenshi
+
+All rights reserved.
+
+No permission is granted to copy, modify, distribute, sublicense, or sell this
+software or substantial portions of it without prior written permission from
+the copyright holder, except where applicable law or a separate third-party
+license expressly permits otherwise.
+
+Public availability of this repository, including review or processing by AI
+tools, does not grant permission to reproduce or adapt copyrightable portions
+of the source. Where written permission is granted, retain this notice and
+identify YukiiNoTenshi as the copyright holder.
+
+Legal notice (Russian Federation, Civil Code Part IV): computer programs,
+including source and object code, are protected under Article 1261. Article 1259
+defines copyrightable subject matter and excludes ideas, concepts, principles,
+methods, processes, systems, and ways of solving problems as such. Articles
+1229 and 1270 reserve use of a protected work, including reproduction and
+adaptation, to the right holder, subject to statutory exceptions and any
+separate permission. Article 1301 provides civil remedies for an established
+violation of the exclusive right. Authorship and the author's right to a name
+are separately addressed by Article 1265; omission of a credit line alone is
+not automatically the same as unauthorized copying. AI use by itself, or an
+independent implementation of the same abstract functionality, does not by
+itself establish infringement. The facts and applicable law determine whether
+a particular use is permitted.
+
+References to the Code:
+- Article 1229 — https://www.consultant.ru/document/cons_doc_LAW_64629/98ad2641f95945c4b7956150260564c8b44028d9/
+- Article 1259 — https://www.consultant.ru/document/cons_doc_LAW_64629/be05678dc42ddc67aae5be9ba9beebd367fb9a3f/
+- Article 1261 — https://www.consultant.ru/document/cons_doc_LAW_64629/ce1359ed5b9bd99896d7a496c7887e7c223a2cbc/
+- Article 1265 — https://www.consultant.ru/document/cons_doc_LAW_64629/01cf40c9e42efacdb8dff7cdd410e2542bbbfdf4/
+- Article 1270 — https://www.consultant.ru/document/cons_doc_LAW_64629/dffcf0b87b80ff38f430dc822a0074e76ccd41a0/
+- Article 1301 — https://www.consultant.ru/document/cons_doc_LAW_64629/c2f79b53ce582e92680379e2ebd23eeb9fb7855a/
+
+Third-party components retain their own licenses. In particular, the bundled
+JLayer library is covered by the GNU Lesser General Public License, version 2.1;
+see `src/main/resources/META-INF/licenses/jlayer-LGPL-2.1.txt`.

@@ -1,0 +1,146 @@
+{
+  "unavailable": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:unavailable",
+        "stream": true
+      }
+    ]
+  },
+  "busy": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:busy",
+        "stream": true
+      }
+    ]
+  },
+  "dialing": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:dialing",
+        "stream": true
+      }
+    ]
+  },
+  "waiting": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:waiting",
+        "stream": true
+      }
+    ]
+  },
+  "offline": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:offline",
+        "stream": true
+      }
+    ]
+  },
+  "ended": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ended",
+        "stream": true
+      }
+    ]
+  },
+  "voicemail": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:voicemail",
+        "stream": true
+      }
+    ]
+  },
+  "invalid_number": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:invalid_number",
+        "stream": true
+      }
+    ]
+  },
+  "ring_nokia": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ring_nokia",
+        "stream": true
+      }
+    ]
+  },
+  "ring_office": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ring_office",
+        "stream": true
+      }
+    ]
+  },
+  "ring_iphone": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ring_iphone",
+        "stream": true
+      }
+    ]
+  },
+  "ring_blackberry": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ring_blackberry",
+        "stream": true
+      }
+    ]
+  },
+  "ring_atomic": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ring_atomic",
+        "stream": true
+      }
+    ]
+  },
+  "ring_samsung": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:ring_samsung",
+        "stream": true
+      }
+    ]
+  },
+  "notify_alpha": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:notify_alpha",
+        "stream": true
+      }
+    ]
+  },
+  "notify_beep_once": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:notify_beep_once",
+        "stream": true
+      }
+    ]
+  },
+  "notify_chaos": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:notify_chaos",
+        "stream": true
+      }
+    ]
+  },
+  "notify_cosmic-radio": {
+    "sounds": [
+      {
+        "name": "svc-fox-mobile:notify_cosmic-radio",
+        "stream": true
+      }
+    ]
+  }
+}

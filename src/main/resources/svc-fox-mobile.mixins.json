@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "package": "dev.yukiinotenshi.simplephonepromax.mixin",
+  "priority": 2000,
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "ClientPlayerInteractionManagerMixin",
+    "OriginalClientSuppressionMixin",
+    "OriginalVoicechatSuppressionMixin",
+    "OriginalPhoneSuppressionMixin",
+    "OriginalScreenReplacementMixin",
+    "OriginalSoundSuppressionMixin",
+    "OriginalMessagesMixin",
+    "MicrophoneProcessorRingtoneMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
