@@ -14,6 +14,7 @@ public final class OrganizationCalls {
     private static long nextShiftChangeAt;
     private static final ArrayDeque<Long> shiftRequests = new ArrayDeque<>();
     private static String status = "", context = "", number = "";
+    private static UUID currentTarget;
     private static long next, generation;
 
     public static String status() { return status; }
@@ -55,14 +56,42 @@ public final class OrganizationCalls {
                 (value.has("position") ? value.get("position").getAsInt() : 1);
         if (value.has("target") && !value.get("target").isJsonNull()) {
             UUID target = UUID.fromString(value.get("target").getAsString());
+            if (value.has("accepted") && value.get("accepted").getAsBoolean()) {
+                status = "Оператор ответил";
+                queued = false;
+                currentTarget = null;
+                number = "";
+                generation++;
+                if (MinecraftClient.getInstance().player != null && CallControlService.available())
+                    CallControlService.extension("org-cancel", new JsonObject());
+                return;
+            }
+            if (target.equals(currentTarget)) return;
+            if (currentTarget != null && SimpleVoiceCallClient.callManager.getOtherPlayerUuid() != null &&
+                    currentTarget.equals(SimpleVoiceCallClient.callManager.getOtherPlayerUuid())) {
+                UUID previous = currentTarget;
+                SimpleVoiceCallClient.callManager.endCall();
+                var client = MinecraftClient.getInstance();
+                if (client.player != null) ModNetworking.sendCallHangup(client.player.getUuid(), previous);
+            }
+            currentTarget = target;
             String name = value.get("name").getAsString();
-            cancel();
             if (PhoneDialer.call(target, name)) {
                 status = "Соединяем с оператором";
                 MinecraftClient.getInstance().setScreen(new dev.yukiinotenshi.simplephonepromax.gui.ActiveCallScreen());
             } else {
-                status = "Оператор недоступен · попробуйте позже";
+                status = "Вызываем оператора · если он не ответит, вызов перейдёт дальше";
             }
+        } else {
+            if (currentTarget != null && SimpleVoiceCallClient.callManager.getState() !=
+                    dev.yukiinotenshi.simplephonepromax.call.CallState.ACTIVE && currentTarget.equals(
+                    SimpleVoiceCallClient.callManager.getOtherPlayerUuid())) {
+                UUID previous = currentTarget;
+                SimpleVoiceCallClient.callManager.endCall();
+                var client = MinecraftClient.getInstance();
+                if (client.player != null) ModNetworking.sendCallHangup(client.player.getUuid(), previous);
+            }
+            currentTarget = null;
         }
     }
 
@@ -70,8 +99,12 @@ public final class OrganizationCalls {
         if (!queued) return;
         long now = System.currentTimeMillis();
         MinecraftClient client = MinecraftClient.getInstance();
+        var callState = SimpleVoiceCallClient.callManager.getState();
+        UUID other = SimpleVoiceCallClient.callManager.getOtherPlayerUuid();
+        boolean ourCall = currentTarget != null && currentTarget.equals(other) &&
+                callState != dev.yukiinotenshi.simplephonepromax.call.CallState.NONE;
         if (client.player == null || !context.equals(dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.current()) ||
-                SimpleVoiceCallClient.callManager.isInCall() || EncryptedCalls.active()) {
+                (SimpleVoiceCallClient.callManager.isInCall() && !ourCall) || EncryptedCalls.active()) {
             cancel();
             return;
         }
@@ -98,6 +131,7 @@ public final class OrganizationCalls {
         busy = false;
         generation++;
         number = "";
+        currentTarget = null;
         if (MinecraftClient.getInstance().player != null && CallControlService.available()) {
             CallControlService.extension("org-cancel", new JsonObject());
         }
