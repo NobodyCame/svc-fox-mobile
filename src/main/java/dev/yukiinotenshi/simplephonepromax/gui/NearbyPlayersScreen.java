@@ -51,9 +51,12 @@ public class NearbyPlayersScreen extends Screen {
          }
       }
 
+      dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.refreshPublicDirectoryAsync(this.client);
       this.players.sort(Comparator.comparing(NearbyPlayersScreen.PlayerRow::name, String.CASE_INSENSITIVE_ORDER));
       this.rebuildButtons();
    }
+
+   public void refreshDirectoryView() { if (this.client != null && this.client.currentScreen == this) this.rebuildButtons(); }
 
    private void addTexturedButton(ButtonWidget button) {
       this.texturedButtons.add(button);
@@ -193,7 +196,7 @@ public class NearbyPlayersScreen extends Screen {
          boolean added=SimpleVoiceCallClient.config.hasContact(row.uuid().toString());
          boolean inCall=ModNetworking.isPlayerInPhoneCall(row.uuid());
          if(this.filterMode==1&&!added||this.filterMode==2&&!inCall)continue;
-         String number = PhoneNumberManager.getDisplayNumberFor(row.uuid());
+         String number = PhoneNumberManager.getVisibleNumberFor(row.uuid());
          String haystack = (row.name() + " " + PhoneNumberManager.formatNumber(number) + " " + number).toLowerCase();
          if (query.isEmpty()||haystack.contains(query) || (!digits.isEmpty() && PhoneNumberManager.onlyDigits(number).contains(digits))) {
             out.add(row);
@@ -208,9 +211,8 @@ public class NearbyPlayersScreen extends Screen {
          return;
       }
 
-      String number = PhoneNumberManager.getDisplayNumberFor(row.uuid());
-      SimpleVoiceCallClient.config.addContact(new ModConfig.Contact(row.name(), number, row.uuid().toString()));
-      this.rebuildButtons();
+      String number = PhoneNumberManager.getVisibleNumberFor(row.uuid());
+      if (this.client != null) this.client.setScreen(new PhoneNickEditScreen(this, row.uuid(), number, row.name(), ""));
    }
 
    private void invitePlayer(NearbyPlayersScreen.PlayerRow row) {
@@ -297,7 +299,7 @@ public class NearbyPlayersScreen extends Screen {
             // Contact membership is shown in the subtitle/check action; it should not tint the whole row.
             PhoneGuiTextures.drawTabItem(context, frame, rowX, y, rowW, rowH, hovered);
             PhoneGuiTextures.drawOnlineIcon(context, rowX + frame.px(4), textY, true);
-            String number = PhoneNumberManager.getDisplayNumberFor(row.uuid());
+            String number = PhoneNumberManager.getVisibleNumberFor(row.uuid());
             String text = (inPhoneCall ? "☎ " : "") + row.name();
             PhoneGuiTextures.drawTrimmedText(
                context,
@@ -309,7 +311,8 @@ public class NearbyPlayersScreen extends Screen {
                inPhoneCall ? 0xFF88FF88 : -1,
                true
             );
-            String subtitle=PhoneNumberManager.formatNumber(number)+(added?" · контакт":" · рядом")+(inPhoneCall?" · разговор":"");
+            String numberLabel=number==null?"номер скрыт":PhoneNumberManager.formatNumber(number);
+            String subtitle=numberLabel+(added?" · контакт":" · рядом")+(inPhoneCall?" · разговор":"");
             PhoneGuiTextures.drawTrimmedText(context,this.textRenderer,subtitle,rowX+frame.px(17),y+frame.px(13),Math.max(20,addX-rowX-frame.px(20)),0xFFBFC6D0,false);
             PhoneGuiTextures.drawButtonRect(
                context,

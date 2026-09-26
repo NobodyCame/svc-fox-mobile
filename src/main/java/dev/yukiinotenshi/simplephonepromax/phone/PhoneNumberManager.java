@@ -3,6 +3,8 @@ package dev.yukiinotenshi.simplephonepromax.phone;
 import com.google.gson.Gson;
 import dev.yukiinotenshi.simplephonepromax.compat.CallStandard;
 import dev.yukiinotenshi.simplephonepromax.compat.LegacyCallBridge;
+import dev.yukiinotenshi.simplephonepromax.config.ModConfig;
+import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import dev.yukiinotenshi.simplephonepromax.network.ModNetworking;
@@ -229,6 +231,21 @@ public class PhoneNumberManager {
       }
 
       return getNumberFor(uuid);
+   }
+
+   /** Number visible in the nearby-player directory: saved contacts or explicit owner opt-in only. */
+   public static String getVisibleNumberFor(UUID uuid) {
+      if (uuid == null) return null;
+      if (SimpleVoiceCallClient.config != null) {
+         String id = uuid.toString();
+         for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
+            if (!ServerProfiles.matches(contact.server) || !id.equals(contact.uuid)) continue;
+            String saved = onlyDigits(contact.number);
+            if (isValidKnownNumber(saved)) return saved;
+         }
+      }
+      String shared = BackendNumberService.getPublicNumberFor(uuid);
+      return isValidKnownNumber(shared) ? shared : null;
    }
 
    public static String getMyDisplayNumber() {

@@ -68,6 +68,7 @@ public class PhoneSettingsScreen extends Screen {
    }
    case "Оператор и данные" -> {
     button("Оператор: "+dev.yukiinotenshi.simplephonepromax.compat.CallStandard.label(config().callStandard),()->client.setScreen(new PhoneCallStandardScreen(this)),!callBusy());
+    button("Показывать мой номер всем: "+on(config().showOwnNumberInDirectory),()->{config().showOwnNumberInDirectory=!config().showOwnNumberInDirectory;save();BackendNumberService.registerSelfAsync(client);},BackendNumberService.isEnabled());
     button("Мой номер: "+PhoneNumberManager.formatNumber(PhoneNumberManager.getMyDisplayNumber()),()->client.keyboard.setClipboard(PhoneNumberManager.getMyDisplayNumber()));
     button("Настройки оператора",()->client.setScreen(new PhoneBackendSettingsScreen(this)));
     button("Проверить связь",()->client.setScreen(new ConnectionDiagnosticsScreen(this)));

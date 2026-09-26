@@ -46,6 +46,7 @@ public class ModConfig {
    public boolean passwordProtectedCalls = true;
    public boolean passwordProtectedCallsInitialized = false;
    public boolean backendNumbersEnabled = true;
+   public boolean showOwnNumberInDirectory = false;
    public boolean legacyNumberMode = false;
    public String callStandard = "fox";
    public String backendBaseUrl = DEFAULT_BACKEND_URL;
@@ -105,6 +106,7 @@ public class ModConfig {
                passwordSettingMigrated = !loaded.passwordProtectedCallsInitialized;
                this.passwordProtectedCallsInitialized = true;
                this.backendNumbersEnabled = loaded.backendNumbersEnabled;
+               this.showOwnNumberInDirectory = loaded.showOwnNumberInDirectory;
                this.legacyNumberMode = loaded.legacyNumberMode;
                this.callStandard = "legacy".equals(loaded.callStandard) || "yoghurt".equals(loaded.callStandard) ? "legacy" : "fox";
                String previousBackendUrl=loaded.backendBaseUrl;
@@ -184,17 +186,17 @@ public class ModConfig {
    }
 
    public void addContact(ModConfig.Contact c) {
-      if (c != null && c.number != null) {
+      if (c != null && ((c.number != null && !c.number.isBlank()) || (c.uuid != null && !c.uuid.isBlank()))) {
          for (int i = 0; i < this.contacts.size(); i++) {
             ModConfig.Contact x = this.contacts.get(i);
             if (!java.util.Objects.equals(x.server,c.server)) continue;
-            if (x.number != null && x.number.equals(c.number)) {
+            if (c.uuid != null && x.uuid != null && x.uuid.equals(c.uuid)) {
                this.contacts.set(i, c);
                this.save();
                return;
             }
 
-            if (c.uuid != null && x.uuid != null && x.uuid.equals(c.uuid)) {
+            if (c.number != null && !c.number.isBlank() && x.number != null && x.number.equals(c.number)) {
                this.contacts.set(i, c);
                this.save();
                return;

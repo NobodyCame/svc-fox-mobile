@@ -14,6 +14,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -35,8 +36,12 @@ public final class BackendNumberService {
    private static final Map<UUID, BackendNumberService.Entry> UUID_TO_ENTRY = new java.util.concurrent.ConcurrentHashMap<>();
    private static final Map<String, UUID> NUMBER_TO_UUID = new java.util.concurrent.ConcurrentHashMap<>();
    private static final Map<String, String> SHORT_TO_TARGET = new java.util.concurrent.ConcurrentHashMap<>();
+   private static final Map<UUID, String> PUBLIC_NUMBERS = new java.util.concurrent.ConcurrentHashMap<>();
    private static long lastRegisterMs;
+   private static long lastPublicDirectoryMs;
+   private static volatile String publicDirectoryServer = "";
    private static volatile boolean requestInFlight;
+   private static volatile boolean publicDirectoryInFlight;
 
    private BackendNumberService() {
    }
@@ -111,8 +116,7 @@ public final class BackendNumberService {
    }
 
    public static boolean isEnabled() {
-      return !dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy() && SimpleVoiceCallClient.config != null
-         && SimpleVoiceCallClient.config.backendNumbersEnabled
+      return SimpleVoiceCallClient.config != null && SimpleVoiceCallClient.config.backendNumbersEnabled
          && SimpleVoiceCallClient.config.backendBaseUrl != null
          && !SimpleVoiceCallClient.config.backendBaseUrl.isBlank();
    }
@@ -121,6 +125,72 @@ public final class BackendNumberService {
    public static String getNumberFor(UUID uuid) {
       Entry entry = uuid != null ? UUID_TO_ENTRY.get(uuid) : null;
       return entry != null ? entry.backendNumber : null;
+   }
+
+   public static String getPublicNumberFor(UUID uuid) {
+      if (uuid == null || !ServerProfiles.current().equals(publicDirectoryServer)) return null;
+      return PUBLIC_NUMBERS.get(uuid);
+   }
+
+   public static void refreshPublicDirectoryAsync(MinecraftClient client) {
+      if (!isEnabled() || client == null || client.player == null) return;
+      String server = currentServerAddress(client).trim().toLowerCase(java.util.Locale.ROOT);
+      if (server.isEmpty()) return;
+      long now = System.currentTimeMillis();
+      if (!server.equals(publicDirectoryServer)) {
+         synchronized (BackendNumberService.class) {
+            if (!server.equals(publicDirectoryServer)) {
+               PUBLIC_NUMBERS.clear();
+               publicDirectoryServer = server;
+               lastPublicDirectoryMs = 0L;
+            }
+         }
+      }
+      if (publicDirectoryInFlight || now - lastPublicDirectoryMs < 30_000L) return;
+      synchronized (BackendNumberService.class) {
+         if (publicDirectoryInFlight || now - lastPublicDirectoryMs < 30_000L) return;
+         publicDirectoryInFlight = true;
+         lastPublicDirectoryMs = now;
+      }
+      String encoded = URLEncoder.encode(server, StandardCharsets.UTF_8);
+      HttpRequest request;
+      try {
+         request = HttpRequest.newBuilder(endpoint("/public-numbers?server_address=" + encoded))
+            .timeout(Duration.ofSeconds(5L)).GET().header("Accept", "application/json").build();
+      } catch (Throwable t) {
+         publicDirectoryInFlight = false;
+         return;
+      }
+      dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.client(request.uri())
+         .sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+         .whenComplete((response, error) -> {
+            publicDirectoryInFlight = false;
+            if (!server.equals(publicDirectoryServer)) {
+               MinecraftClient mc = MinecraftClient.getInstance();
+               if (mc != null) mc.execute(() -> refreshPublicDirectoryAsync(mc));
+               return;
+            }
+            if (error != null || response == null || response.statusCode() < 200 || response.statusCode() >= 300) return;
+            try {
+               JsonObject root = GSON.fromJson(response.body(), JsonObject.class);
+               if (root == null || !root.has("items") || !root.get("items").isJsonArray()) return;
+               Map<UUID, String> refreshed = new java.util.HashMap<>();
+               for (var item : root.getAsJsonArray("items")) {
+                  if (!item.isJsonObject()) continue;
+                  JsonObject row = item.getAsJsonObject();
+                  String id = getString(row, "minecraft_uuid");
+                  String number = PhoneNumberManager.onlyDigits(getString(row, "number"));
+                  if (id != null && PhoneNumberManager.isValidKnownNumber(number)) refreshed.put(UUID.fromString(id), number);
+               }
+               PUBLIC_NUMBERS.clear();
+               PUBLIC_NUMBERS.putAll(refreshed);
+               MinecraftClient mc = MinecraftClient.getInstance();
+               if (mc != null) mc.execute(() -> {
+                  if (mc.currentScreen instanceof dev.yukiinotenshi.simplephonepromax.gui.NearbyPlayersScreen screen) screen.refreshDirectoryView();
+               });
+            } catch (Throwable ignored) {
+            }
+         });
    }
 
    /** Cache the operator number returned for an online peer by the call service. */
@@ -214,6 +284,7 @@ public final class BackendNumberService {
          body.addProperty("original_short_number", originalShort);
       }
       body.addProperty("device_id", deviceId);
+      body.addProperty("show_number", SimpleVoiceCallClient.config.showOwnNumberInDirectory);
 
       HttpRequest request;
       try {

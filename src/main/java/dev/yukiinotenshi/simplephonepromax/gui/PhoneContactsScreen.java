@@ -123,10 +123,7 @@ public class PhoneContactsScreen extends Screen {
                added.add(pid);
                markMet(pid, c.name);
                PhoneNumberManager.registerPlayer(pid, null);
-               String num = PhoneNumberManager.getDisplayNumberFor(pid);
-               if (num == null) {
-                  num = digits;
-               }
+               String num = digits.isEmpty() ? dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.getPublicNumberFor(pid) : digits;
 
                String realName = c.name != null && !c.name.isEmpty() ? c.name : Text.translatable("phone.contact.default_name").getString();
                if (mc != null && mc.world != null) {
@@ -480,7 +477,8 @@ public class PhoneContactsScreen extends Screen {
                   ? row.customName
                   : row.realName;
                String nameText=(isSelf?"Вы · ":"")+(inPhoneCall?"☎ ":"")+displayName;
-               String statusText=PhoneNumberManager.formatNumber(row.number)+" · "+(row.online?"в сети":"не в сети")+(inPhoneCall?" · разговор":"");
+               String numberLabel=row.number==null||row.number.isBlank()?"номер не добавлен":PhoneNumberManager.formatNumber(row.number);
+               String statusText=numberLabel+" · "+(row.online?"в сети":"не в сети")+(inPhoneCall?" · разговор":"");
                PhoneGuiTextures.drawTrimmedText(
                   drawContext,
                   this.textRenderer,

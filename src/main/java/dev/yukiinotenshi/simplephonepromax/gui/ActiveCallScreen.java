@@ -72,29 +72,22 @@ public class ActiveCallScreen extends Screen {
             .position(buttonX, buttonY)
             .build();
          this.addTexturedButton(muteBtn);
-         boolean alreadyInContacts = otherNumber != null && SimpleVoiceCallClient.config.hasContact(otherNumber);
+         boolean alreadyInContacts = (otherUuid != null && SimpleVoiceCallClient.config.hasContact(otherUuid.toString()))
+            || (otherNumber != null && SimpleVoiceCallClient.config.hasContact(otherNumber));
          String finalOtherName = otherName;
          String finalOtherNumber = otherNumber;
          UUID finalOtherUuid = otherUuid;
+         String savedLabel = "";
+         if (finalOtherUuid != null) for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
+            if (dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(contact.server)
+               && finalOtherUuid.toString().equals(contact.uuid)) { savedLabel = contact.nickname == null ? "" : contact.nickname; break; }
+         }
+         String finalSavedLabel = savedLabel;
          ButtonWidget contactBtn = ButtonWidget.builder(
-               Text.translatable(alreadyInContacts ? "phone.call.already_contact" : "phone.call.add_contact"),
+               Text.translatable(alreadyInContacts ? "phone.call.edit_contact" : "phone.call.add_contact"),
                b -> {
-                  if (finalOtherNumber != null) {
-                     if (!SimpleVoiceCallClient.config.hasContact(finalOtherNumber)
-                        && (finalOtherUuid == null || !SimpleVoiceCallClient.config.hasContact(finalOtherUuid.toString()))) {
-                        SimpleVoiceCallClient.config
-                           .addContact(
-                              new ModConfig.Contact(
-                                 finalOtherName != null ? finalOtherName : Text.translatable("phone.contact.default_name").getString(),
-                                 finalOtherNumber,
-                                 finalOtherUuid != null ? finalOtherUuid.toString() : null
-                              )
-                           );
-                        if (this.client != null) {
-                           this.client.setScreen(new ActiveCallScreen());
-                        }
-                     }
-                  }
+                  String contactName = finalOtherName != null ? finalOtherName : "";
+                  if (this.client != null) this.client.setScreen(new PhoneNickEditScreen(this, finalOtherUuid, finalOtherNumber, contactName, finalSavedLabel));
                }
             )
             .size(buttonW, buttonH)
@@ -234,7 +227,14 @@ public class ActiveCallScreen extends Screen {
             status = Text.translatable("phone.call.incoming_status");
             titleColor = 5635925;
          } else if (state == CallState.ACTIVE) {
-            title = Text.translatable("phone.call.active_player", new Object[]{otherName != null ? otherName : ""});
+            boolean savedContact = otherUuid != null && SimpleVoiceCallClient.config.hasContact(otherUuid.toString());
+            String callerLabel = otherName != null ? otherName : "";
+            if (!savedContact && otherUuid != null) {
+               String visibleCallerNumber = PhoneNumberManager.getDisplayNumberFor(otherUuid);
+               callerLabel = visibleCallerNumber == null || visibleCallerNumber.isBlank()
+                  ? "Неизвестный номер" : PhoneNumberManager.formatNumber(visibleCallerNumber);
+            }
+            title = Text.translatable("phone.call.active_player", callerLabel);
             status = Text.translatable("phone.call.connected");
             titleColor = 5636095;
          } else if (state == CallState.BUSY) {

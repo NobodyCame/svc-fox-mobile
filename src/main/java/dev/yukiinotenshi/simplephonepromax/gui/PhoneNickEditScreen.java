@@ -2,33 +2,36 @@ package dev.yukiinotenshi.simplephonepromax.gui;
 
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import dev.yukiinotenshi.simplephonepromax.config.ModConfig;
-import dev.yukiinotenshi.simplephonepromax.phone.PhoneClientActions;
 import dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager;
+import dev.yukiinotenshi.simplephonepromax.phone.PhoneMessages;
+import dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.text.Text;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.text.Text;
 
+/** Adds or edits a local contact label and its changeable phone number. */
 public class PhoneNickEditScreen extends Screen {
    private final Screen parent;
    private final UUID targetUuid;
-   private final String targetNumber;
    private final String realName;
-   private String currentCustomName;
+   private final String initialNickname;
+   private final String initialNumber;
    private TextFieldWidget nameField;
+   private TextFieldWidget numberField;
    private final List<ButtonWidget> texturedButtons = new ArrayList<>();
 
    public PhoneNickEditScreen(Screen parent, UUID targetUuid, String targetNumber, String realName, String currentCustomName) {
       super(Text.translatable("phone.contact.edit.title"));
       this.parent = parent;
       this.targetUuid = targetUuid;
-      this.targetNumber = targetNumber;
-      this.realName = realName != null ? realName : Text.translatable("phone.contact.default_name").getString();
-      this.currentCustomName = currentCustomName != null && !currentCustomName.isEmpty() ? currentCustomName : "";
+      this.realName = realName != null ? realName : "";
+      this.initialNickname = currentCustomName != null ? currentCustomName : "";
+      this.initialNumber = PhoneNumberManager.onlyDigits(targetNumber);
    }
 
    protected void init() {
@@ -36,37 +39,35 @@ public class PhoneNickEditScreen extends Screen {
       this.texturedButtons.clear();
       PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
       int cx = frame.centerX();
-      int w = frame.px(158);
-      int h = Math.max(12, frame.px(14));
-      int fieldY = frame.y() + frame.px(75);
-      this.nameField = new TextFieldWidget(this.textRenderer, cx - w / 2, fieldY, w, h, Text.translatable("phone.contact.edit.name"));
+      int w = Math.min(frame.px(158), frame.width() - frame.px(28));
+      int h = Math.max(12, frame.px(13));
+      int x = cx - w / 2;
+      int nameY = frame.y() + frame.px(55);
+      this.nameField = new TextFieldWidget(this.textRenderer, x, nameY, w, h, Text.translatable("phone.contact.edit.name"));
       this.nameField.setMaxLength(48);
-      this.nameField.setText(this.currentCustomName);
-      this.nameField.setFocused(true);
-      this.setInitialFocus(this.nameField);
+      this.nameField.setPlaceholder(Text.translatable("phone.contact.edit.name_placeholder"));
+      this.nameField.setText(this.initialNickname);
       this.addDrawableChild(this.nameField);
-      ButtonWidget saveBtn = ButtonWidget.builder(Text.translatable("phone.contact.edit.save"), b -> {
-         String typed = this.nameField != null ? this.nameField.getText() : "";
-         String newName = typed != null ? typed.trim() : "";
-         this.saveCustomName(newName);
-         if (this.client != null) {
-            this.client.setScreen(new PhoneContactsScreen());
-         }
-      }).size(frame.px(52), Math.max(12, frame.px(14))).position(frame.x() + frame.px(12), frame.y() + frame.px(105)).build();
-      this.addTexturedButton(saveBtn);
-      ButtonWidget resetBtn = ButtonWidget.builder(Text.translatable("phone.contact.edit.reset"), b -> {
-         this.saveCustomName("");
-         if (this.client != null) {
-            this.client.setScreen(new PhoneContactsScreen());
-         }
-      }).size(frame.px(62), Math.max(12, frame.px(14))).position(frame.x() + frame.px(67), frame.y() + frame.px(105)).build();
-      this.addTexturedButton(resetBtn);
-      ButtonWidget cancelBtn = ButtonWidget.builder(Text.translatable("phone.contact.edit.cancel"), b -> {
-         if (this.client != null) {
-            this.client.setScreen(new PhoneContactsScreen());
-         }
-      }).size(frame.px(52), Math.max(12, frame.px(14))).position(frame.x() + frame.px(132), frame.y() + frame.px(105)).build();
-      this.addTexturedButton(cancelBtn);
+
+      int numberY = frame.y() + frame.px(79);
+      this.numberField = new TextFieldWidget(this.textRenderer, x, numberY, w, h, Text.translatable("phone.contact.edit.number_label"));
+      this.numberField.setMaxLength(18);
+      this.numberField.setPlaceholder(Text.translatable("phone.contact.edit.number_placeholder"));
+      this.numberField.setText(this.initialNumber);
+      this.addDrawableChild(this.numberField);
+      this.setInitialFocus(this.nameField);
+
+      int buttonY = frame.y() + frame.px(103);
+      int gap = Math.max(2, frame.px(2));
+      int buttonW = (w - 2 * gap) / 3;
+      this.addTexturedButton(ButtonWidget.builder(Text.translatable("phone.contact.edit.save"), b -> this.saveContact())
+         .size(buttonW, h).position(x, buttonY).build());
+      this.addTexturedButton(ButtonWidget.builder(Text.translatable("phone.contact.edit.cancel"), b -> this.returnToParent())
+         .size(buttonW, h).position(x + buttonW + gap, buttonY).build());
+      this.addTexturedButton(ButtonWidget.builder(Text.translatable("phone.contact.edit.reset"), b -> {
+         this.nameField.setText(this.realName);
+         this.saveContact();
+      }).size(buttonW, h).position(x + 2 * (buttonW + gap), buttonY).build());
    }
 
    private void addTexturedButton(ButtonWidget button) {
@@ -74,55 +75,56 @@ public class PhoneNickEditScreen extends Screen {
       this.addDrawableChild(button);
    }
 
-   private void saveCustomName(String newName) {
-      String uuidS=this.targetUuid==null?null:this.targetUuid.toString();String digits=PhoneNumberManager.onlyDigits(this.targetNumber);
-      for(var c:SimpleVoiceCallClient.config.contacts){
-         if(!dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(c.server))continue;
-         if(uuidS!=null&&uuidS.equals(c.uuid)||uuidS==null&&digits.equals(PhoneNumberManager.onlyDigits(c.number))){c.nickname=newName;c.name=this.realName;SimpleVoiceCallClient.config.save();return;}
+   private void saveContact() {
+      String nickname = this.nameField == null ? "" : this.nameField.getText().trim();
+      String number = PhoneNumberManager.onlyDigits(this.numberField == null ? "" : this.numberField.getText());
+      boolean validNumber = number.isEmpty() ? this.targetUuid != null : PhoneNumberManager.isValidKnownNumber(number);
+      if (nickname.isEmpty() || !validNumber) {
+         PhoneMessages.show(nickname.isEmpty() ? "Введите имя контакта" : "Номер должен содержать 1–3, 6 или 7–15 цифр");
+         return;
       }
-      var c=new ModConfig.Contact(this.realName,digits,uuidS);c.nickname=newName;SimpleVoiceCallClient.config.contacts.add(c);SimpleVoiceCallClient.config.save();
+
+      String uuid = this.targetUuid == null ? null : this.targetUuid.toString();
+      ModConfig.Contact found = null;
+      for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
+         if (!ServerProfiles.matches(contact.server)) continue;
+         if ((uuid != null && uuid.equals(contact.uuid)) || (!number.isEmpty() && number.equals(PhoneNumberManager.onlyDigits(contact.number)))) {
+            found = contact;
+            break;
+         }
+      }
+      if (found == null) {
+         found = new ModConfig.Contact(this.realName, number, uuid);
+         SimpleVoiceCallClient.config.contacts.add(found);
+      }
+      found.name = this.realName.isBlank() ? nickname : this.realName;
+      found.nickname = nickname;
+      found.number = number;
+      if (uuid != null) found.uuid = uuid;
+      found.server = ServerProfiles.current();
+      SimpleVoiceCallClient.config.save();
+      PhoneMessages.show("Контакт сохранён: " + nickname);
+      this.returnToParent();
    }
 
-   public void render(DrawContext drawContext, int mouseX, int mouseY, float partialTick) {
-      drawContext.fill(0, 0, this.width, this.height, -872415232);
+   private void returnToParent() {
+      if (this.client != null) this.client.setScreen(this.parent != null ? this.parent : new PhoneContactsScreen());
+   }
+
+   public void render(DrawContext context, int mouseX, int mouseY, float delta) {
       PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
-      int cx = frame.centerX();
-      PhoneGuiTextures.drawUniversalBackground(drawContext, frame, mouseX, mouseY);
-      Text title = Text.translatable("phone.contact.edit.title");
-      PhoneGuiTextures.drawCenteredTrimmedText(
-         drawContext, this.textRenderer, title, cx, frame.y() + frame.px(8), frame.px(170), 16777096
-      );
-      Text info1 = Text.translatable("phone.contact.edit.real_name", new Object[]{this.realName});
-      PhoneGuiTextures.drawCenteredTrimmedText(
-         drawContext, this.textRenderer, info1, cx, frame.y() + frame.px(28), frame.px(170), 16777215
-      );
-      Text info2 = Text.translatable("phone.contact.edit.number", new Object[]{PhoneNumberManager.formatNumber(this.targetNumber)});
-      PhoneGuiTextures.drawCenteredTrimmedText(
-         drawContext, this.textRenderer, info2, cx, frame.y() + frame.px(43), frame.px(170), 8978312
-      );
-      Text labelField = Text.translatable("phone.contact.edit.new_name");
-      PhoneGuiTextures.drawCenteredTrimmedText(
-         drawContext, this.textRenderer, labelField, cx, frame.y() + frame.px(62), frame.px(170), 13421772
-      );
-      super.render(drawContext,mouseX,mouseY,partialTick);PhoneGuiTextures.widgets(this,drawContext,mouseX,mouseY);
-      for (ButtonWidget button : this.texturedButtons) {
-         PhoneGuiTextures.drawButton(drawContext, this.textRenderer, button, mouseX, mouseY);
-      }
+      PhoneGuiTextures.drawUniversalBackground(context, frame, mouseX, mouseY);
+      PhoneGuiTextures.drawCenteredTrimmedText(context, this.textRenderer, this.title, frame.centerX(), frame.y() + frame.px(8), frame.px(170), 0xFFFFE070);
+      PhoneGuiTextures.drawCenteredTrimmedText(context, this.textRenderer, Text.literal(this.realName.isBlank() ? "Номер без сохранённого имени" : this.realName),
+         frame.centerX(), frame.y() + frame.px(28), frame.px(170), 0xFFFFFFFF);
+      PhoneGuiTextures.drawTrimmedText(context, this.textRenderer, "Подпись контакта", this.nameField.getX(), this.nameField.getY() - this.textRenderer.fontHeight - 2, this.nameField.getWidth(), 0xFFFFE070, true);
+      PhoneGuiTextures.drawTrimmedText(context, this.textRenderer, "Номер (можно изменить позже)", this.numberField.getX(), this.numberField.getY() - this.textRenderer.fontHeight - 2, this.numberField.getWidth(), 0xFFFFE070, true);
+      super.render(context, mouseX, mouseY, delta);
+      PhoneGuiTextures.widgets(this, context, mouseX, mouseY);
+      for (ButtonWidget button : this.texturedButtons) PhoneGuiTextures.drawButton(context, this.textRenderer, button, mouseX, mouseY);
    }
 
-   public boolean shouldPause() {
-      return false;
-   }
-
-   public boolean shouldCloseOnEsc() {
-      return true;
-   }
-
-   public void close() {
-      PhoneClientActions.putAwayPhone();
-      super.close();
-   }
+   public boolean shouldPause() { return false; }
+   public boolean shouldCloseOnEsc() { return true; }
+   public void close() { this.returnToParent(); }
 }
-
-
-
