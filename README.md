@@ -14,6 +14,7 @@ Fox Mobile is a client-side Fabric phone and calling mod for Minecraft 1.21.11. 
 On first launch, Fox Mobile copies old configuration, number cache, and user-data files to the new names only when the destination does not exist. Previous files remain as rollback copies. The Legacy call selection also accepts its previous saved value.
 
 Phone numbers are hidden in Fox Mobile's nearby-player directory unless their owner enables public display. Players can add a number to a locally named contact while a call is active and edit the saved number later.
+Starting a call from the nearby-player list requires a visible or saved phone number; manual dialing remains available.
 
 Fox Mobile code is copyrighted by YukiiNoTenshi; distribution terms are in [LICENSE](LICENSE). The optional Legacy bridge keeps the Simple Voice Call mod identifiers only where runtime compatibility requires them.
 

@@ -154,13 +154,21 @@ public class NearbyPlayersScreen extends Screen {
             } else if (mouseX >= addX && mouseX <= addX + actionW) {
                this.addPlayer(row);
             } else {
-               this.client.setScreen(new CallCheckScreen(row.uuid(), row.name()));
+               if (this.canCallFromDirectory(row)) {
+                  this.client.setScreen(new CallCheckScreen(row.uuid(), row.name()));
+               } else {
+                  toast(Text.literal("Номер скрыт. Добавьте его в контакты или наберите вручную."));
+               }
             }
             return true;
          }
       }
 
       return false;
+   }
+
+   private boolean canCallFromDirectory(NearbyPlayersScreen.PlayerRow row) {
+      return row != null && PhoneNumberManager.isValidKnownNumber(PhoneNumberManager.getVisibleNumberFor(row.uuid()));
    }
 
    private int listX(PhoneGuiTextures.Frame frame) {
@@ -296,6 +304,7 @@ public class NearbyPlayersScreen extends Screen {
             int blockX = rowX + rowW - frame.px(4) - actionW;
             int addX = blockX - actionGap - actionW;
             boolean inPhoneCall = ModNetworking.isPlayerInPhoneCall(row.uuid());
+            boolean canCallFromDirectory = this.addToCallMode || this.canCallFromDirectory(row);
             // Contact membership is shown in the subtitle/check action; it should not tint the whole row.
             PhoneGuiTextures.drawTabItem(context, frame, rowX, y, rowW, rowH, hovered);
             PhoneGuiTextures.drawOnlineIcon(context, rowX + frame.px(4), textY, true);
@@ -308,10 +317,10 @@ public class NearbyPlayersScreen extends Screen {
                rowX + frame.px(17),
                textY,
                Math.max(20, addX - rowX - frame.px(20)),
-               inPhoneCall ? 0xFF88FF88 : -1,
+               inPhoneCall ? 0xFF88FF88 : canCallFromDirectory ? -1 : 0xFF9A9A9A,
                true
             );
-            String numberLabel=number==null?"номер скрыт":PhoneNumberManager.formatNumber(number);
+            String numberLabel=number==null?"номер скрыт · только набор/контакт":PhoneNumberManager.formatNumber(number);
             String subtitle=numberLabel+(added?" · контакт":" · рядом")+(inPhoneCall?" · разговор":"");
             PhoneGuiTextures.drawTrimmedText(context,this.textRenderer,subtitle,rowX+frame.px(17),y+frame.px(13),Math.max(20,addX-rowX-frame.px(20)),0xFFBFC6D0,false);
             PhoneGuiTextures.drawButtonRect(
