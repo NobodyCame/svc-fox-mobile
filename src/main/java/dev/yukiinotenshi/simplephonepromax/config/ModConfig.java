@@ -170,33 +170,24 @@ public class ModConfig {
       if (numberOrUuid == null) {
          return false;
       }
+      String wanted = dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(numberOrUuid);
+      if (wanted.isEmpty()) return false;
 
       for (ModConfig.Contact c : this.contacts) {
          if (!dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(c.server)) continue;
-         if (c.number != null && c.number.equals(numberOrUuid)) {
-            return true;
-         }
-
-         if (c.uuid != null && c.uuid.equals(numberOrUuid)) {
-            return true;
-         }
+         if (wanted.equals(dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(c.number))) return true;
       }
 
       return false;
    }
 
    public void addContact(ModConfig.Contact c) {
-      if (c != null && ((c.number != null && !c.number.isBlank()) || (c.uuid != null && !c.uuid.isBlank()))) {
+      if (c != null && c.number != null && !c.number.isBlank()) {
          for (int i = 0; i < this.contacts.size(); i++) {
             ModConfig.Contact x = this.contacts.get(i);
             if (!java.util.Objects.equals(x.server,c.server)) continue;
-            if (c.uuid != null && x.uuid != null && x.uuid.equals(c.uuid)) {
-               this.contacts.set(i, c);
-               this.save();
-               return;
-            }
-
-            if (c.number != null && !c.number.isBlank() && x.number != null && x.number.equals(c.number)) {
+            if (dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(c.number)
+               .equals(dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(x.number))) {
                this.contacts.set(i, c);
                this.save();
                return;
@@ -212,9 +203,10 @@ public class ModConfig {
       if (numberOrUuid != null) {
          this.contacts
             .removeIf(
-               c -> dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(c.server) && (c.number != null && c.number.equals(numberOrUuid)
-                  || c.uuid != null && c.uuid.equals(numberOrUuid)
-                  || c.name != null && c.name.equalsIgnoreCase(numberOrUuid))
+               c -> dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(c.server)
+                  && !dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(c.number).isEmpty()
+                  && dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(c.number)
+                     .equals(dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager.onlyDigits(numberOrUuid))
             );
          this.save();
       }

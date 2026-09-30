@@ -201,7 +201,7 @@ public class NearbyPlayersScreen extends Screen {
       String digits = PhoneNumberManager.onlyDigits(query);
       List<NearbyPlayersScreen.PlayerRow> out = new ArrayList<>();
       for (NearbyPlayersScreen.PlayerRow row : this.players) {
-         boolean added=SimpleVoiceCallClient.config.hasContact(row.uuid().toString());
+         boolean added=SimpleVoiceCallClient.config.hasContact(PhoneNumberManager.getVisibleNumberFor(row.uuid()));
          boolean inCall=ModNetworking.isPlayerInPhoneCall(row.uuid());
          if(this.filterMode==1&&!added||this.filterMode==2&&!inCall)continue;
          String number = PhoneNumberManager.getVisibleNumberFor(row.uuid());
@@ -215,7 +215,7 @@ public class NearbyPlayersScreen extends Screen {
    }
 
    private void addPlayer(NearbyPlayersScreen.PlayerRow row) {
-      if (row == null || SimpleVoiceCallClient.config.hasContact(row.uuid().toString())) {
+      if (row == null || SimpleVoiceCallClient.config.hasContact(PhoneNumberManager.getVisibleNumberFor(row.uuid()))) {
          return;
       }
 
@@ -294,7 +294,7 @@ public class NearbyPlayersScreen extends Screen {
             }
 
             boolean hovered = mouseX >= rowX && mouseX <= rowX + rowW && mouseY >= y && mouseY <= y + rowH;
-            boolean added = SimpleVoiceCallClient.config.hasContact(row.uuid().toString());
+            boolean added = SimpleVoiceCallClient.config.hasContact(PhoneNumberManager.getVisibleNumberFor(row.uuid()));
             boolean blocked = SimpleVoiceCallClient.config.isBlocked(row.uuid());
             int textY = y + frame.px(3);
             int actionW = Math.max(18, frame.px(18));

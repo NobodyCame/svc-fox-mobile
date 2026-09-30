@@ -75,7 +75,7 @@ public class PhoneContactsScreen extends Screen {
 
       this.rows.clear();
       MinecraftClient mc = this.client;
-      Set<UUID> added = new HashSet<>();
+      Set<String> addedNumbers = new HashSet<>();
       Set<UUID> onlineUuids = new HashSet<>();
       if (mc != null && mc.getNetworkHandler() != null) {
          for (PlayerListEntry entry : mc.getNetworkHandler().getPlayerList()) {
@@ -101,26 +101,13 @@ public class PhoneContactsScreen extends Screen {
       for (ModConfig.Contact c : SimpleVoiceCallClient.config.contacts) {
          if (!dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(c.server)) continue;
          try {
-            UUID pid = null;
-            if (c.uuid != null && !c.uuid.isEmpty()) {
-               try {
-                  pid = UUID.fromString(c.uuid);
-               } catch (Throwable var12) {
-               }
-            }
-
-            if (pid == null) {
-               pid = PhoneNumberManager.findUuidByNumber(c.number);
-            }
-
             String digits = PhoneNumberManager.onlyDigits(c.number);
+            if (digits.isEmpty() || !addedNumbers.add(digits)) continue;
+            UUID pid = PhoneNumberManager.findUuidByNumber(digits);
             if (pid == null) {
-               if (!digits.isEmpty()) {
-                  String name = c.name != null && !c.name.isEmpty() ? c.name : Text.translatable("phone.contact.default_name").getString();
-                  this.rows.add(new PhoneContactsScreen.Row(digits, name, c.name, null, false, true));
-               }
-            } else if (!added.contains(pid)) {
-               added.add(pid);
+               String name = c.nickname != null && !c.nickname.isBlank() ? c.nickname : c.name != null && !c.name.isEmpty() ? c.name : Text.translatable("phone.contact.default_name").getString();
+               this.rows.add(new PhoneContactsScreen.Row(digits, name, c.nickname, null, false, true));
+            } else {
                markMet(pid, c.name);
                PhoneNumberManager.registerPlayer(pid, null);
                String num = digits.isEmpty() ? dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.getPublicNumberFor(pid) : digits;
@@ -153,15 +140,6 @@ public class PhoneContactsScreen extends Screen {
    }
 
    private String findCustomNameFor(UUID uuid, String number, String fallback) {
-      if (uuid != null) {
-         for (ModConfig.Contact c : SimpleVoiceCallClient.config.contacts) {
-         if (!dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(c.server)) continue;
-            if (c.uuid != null && c.uuid.equals(uuid.toString()) && c.name != null && !c.name.isEmpty()) {
-               return c.nickname!=null?c.nickname:c.name;
-            }
-         }
-      }
-
       if (number != null) {
          String digits = PhoneNumberManager.onlyDigits(number);
 
@@ -183,7 +161,7 @@ public class PhoneContactsScreen extends Screen {
       PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
       int searchX = listX(frame);
       int searchY = frame.y() + frame.px(22);
-      int filterW=Math.max(36,frame.px(44)),searchW=listW(frame)-filterW-frame.px(2);
+      int addW=Math.max(20,frame.px(25)),filterW=Math.max(30,frame.px(34)),searchW=listW(frame)-filterW-addW-frame.px(4);
       int searchH = Math.max(12, frame.px(14));
       this.searchField = new TextFieldWidget(this.textRenderer, searchX, searchY, searchW, searchH, Text.translatable("phone.search"));
       this.searchField.setMaxLength(80);
@@ -199,6 +177,9 @@ public class PhoneContactsScreen extends Screen {
       this.addTexturedButton(ButtonWidget.builder(Text.literal(filterLabel),b->{this.filterMode=(this.filterMode+1)%3;this.scrollAmount=0;this.rebuildButtons();})
          .tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.literal(filterHint)))
          .size(filterW,searchH).position(searchX+searchW+frame.px(2),searchY).build());
+      this.addTexturedButton(ButtonWidget.builder(Text.literal("+"),b->{if(this.client!=null)this.client.setScreen(new PhoneNickEditScreen(this,null,"","",""));})
+         .tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.literal("Добавить контакт по номеру")))
+         .size(addW,searchH).position(searchX+searchW+filterW+frame.px(4),searchY).build());
       int backW = Math.max(68, frame.px(88));
       int backH = Math.max(12, frame.px(14));
       int backY = Math.min(this.height - backH - 4, frame.bottom() + Math.max(3, frame.px(3)));
@@ -333,7 +314,7 @@ public class PhoneContactsScreen extends Screen {
 
    private int rowHeight(PhoneGuiTextures.Frame frame){return Math.max(22,frame.px(23));}
 
-   private static String favoriteKey(Row row) { return dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.current()+"/"+(row.uuid != null ? row.uuid.toString() : row.number); }
+   private static String favoriteKey(Row row) { return dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.current()+"/"+PhoneNumberManager.onlyDigits(row.number); }
    private List<PhoneContactsScreen.Row> visibleRows() {
       String query = this.searchText == null ? "" : this.searchText.trim().toLowerCase();
       List<PhoneContactsScreen.Row> out = new ArrayList<>();
@@ -354,12 +335,11 @@ public class PhoneContactsScreen extends Screen {
    }
 
    private void callRow(PhoneContactsScreen.Row row) {
-      if (row == null || row.uuid == null || !row.online) {
-         return;
-      }
+      if (row == null) return;
 
       String name = row.customName != null && !row.customName.isEmpty() ? row.customName : row.realName;
       if (this.addToCallMode) {
+         if (row.uuid == null || !row.online) return;
          if (!SimpleVoiceCallClient.callManager.isInActiveCall()) {
             toast(Text.translatable("phone.add_call.no_active_call"));
             if (this.client != null) {
@@ -386,7 +366,12 @@ public class PhoneContactsScreen extends Screen {
          return;
       }
 
-      if(this.client!=null)this.client.setScreen(new CallCheckScreen(row.uuid,name));
+      String contactNumber = PhoneNumberManager.onlyDigits(row.number);
+      if (!PhoneNumberManager.isValidKnownNumber(contactNumber)) {
+         toast(Text.literal("Сначала укажите номер контакта"));
+         return;
+      }
+      if(this.client!=null)this.client.setScreen(new CallCheckScreen(contactNumber));
    }
 
    private void removeRow(PhoneContactsScreen.Row row) {
@@ -395,18 +380,12 @@ public class PhoneContactsScreen extends Screen {
       }
 
       String dig = PhoneNumberManager.onlyDigits(row.number);
-      String uuidS = row.uuid != null ? row.uuid.toString() : null;
       List<ModConfig.Contact> toRemove = new ArrayList<>();
       for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
+         if (!dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(contact.server)) continue;
          boolean match = false;
          String cd = PhoneNumberManager.onlyDigits(contact.number);
-         if (dig != null && !dig.isEmpty() && cd.equals(dig)) {
-            match = true;
-         }
-
-         if (uuidS != null && contact.uuid != null && contact.uuid.equals(uuidS)) {
-            match = true;
-         }
+         if (dig != null && !dig.isEmpty() && cd.equals(dig)) match = true;
 
          if (match) {
             toRemove.add(contact);

@@ -10,9 +10,10 @@ import net.minecraft.text.Text;
 import java.util.*;
 /** Read-only resolution first. No call or organization queue until the user confirms. */
 public final class CallCheckScreen extends Screen {
- private final String number;private UUID target;private String name="Проверка номера…",error="";private boolean started,ready,organization,byNumber,voicemailEligible,voicemailChecked;private int ticks;private long nextVoicemailCheck;private ButtonWidget call,secure,callback,voicemail;
- public CallCheckScreen(String number){super(Text.literal("Перед звонком"));this.number=PhoneNumberManager.onlyDigits(number);byNumber=true;}
- public CallCheckScreen(UUID target,String name){super(Text.literal("Перед звонком"));this.target=target;this.name=name;number=Objects.toString(PhoneNumberManager.getDisplayNumberFor(target),"");ready=true;}
+ private final String number;private final UUID expectedTarget;private UUID target;private String name="Проверка номера…",error="";private boolean started,ready,organization,byNumber,voicemailEligible,voicemailChecked;private int ticks;private long nextVoicemailCheck;private ButtonWidget call,secure,callback,voicemail;
+ public CallCheckScreen(String number){super(Text.literal("Перед звонком"));this.number=PhoneNumberManager.onlyDigits(number);this.expectedTarget=null;byNumber=true;}
+ public CallCheckScreen(UUID target,String name){super(Text.literal("Перед звонком"));this.target=target;this.expectedTarget=null;this.name=name;number=Objects.toString(PhoneNumberManager.getDisplayNumberFor(target),"");ready=true;}
+ public CallCheckScreen(UUID target,String name,String number){super(Text.literal("Перед звонком"));this.target=target;this.expectedTarget=target;this.name=name;this.number=PhoneNumberManager.onlyDigits(number);byNumber=true;}
  protected void init(){var f=PhoneGuiTextures.layout(width,height);int x=f.x()+16,w=f.width()-32,y=f.bottom()-108;
   call=addDrawableChild(ButtonWidget.builder(Text.literal("Позвонить"),b->dial()).dimensions(x,y,w,20).build());
   secure=addDrawableChild(ButtonWidget.builder(Text.literal("Приватный звонок"),b->PrivateCalls.call(target)).dimensions(x,y+24,w/2-2,20).build());
@@ -23,7 +24,10 @@ public final class CallCheckScreen extends Screen {
  }
  private void checkVoicemail(){if(target==null||System.currentTimeMillis()<nextVoicemailCheck)return;voicemailChecked=true;nextVoicemailCheck=System.currentTimeMillis()+5000;UUID checked=target;VoicemailClient.eligible(checked).whenComplete((ok,e)->client.execute(()->{if(client.currentScreen==this&&checked.equals(target)){voicemailEligible=e==null&&Boolean.TRUE.equals(ok);update();}}));}
  private void resolve(){ready=false;BackendNumberService.resolveFreshAsync(number).whenComplete((id,e)->client.execute(()->{
-  if(client.currentScreen!=this)return;target=id;error=e==null?"":"Оператор недоступен";name=id==null?(e==null?"Номер не найден":"Повторите проверку номера"):label(id);ready=true;voicemailChecked=false;update();checkVoicemail();
+  if(client.currentScreen!=this)return;
+  if(expectedTarget!=null&&!expectedTarget.equals(id)){target=null;error=e==null?"Номер не принадлежит этому контакту":"Оператор недоступен";name=error;}
+  else{target=id;error=e==null?"":"Оператор недоступен";name=id==null?(e==null?"Номер не найден":"Повторите проверку номера"):label(id);}
+  ready=true;voicemailChecked=false;update();checkVoicemail();
   if(id==null&&e==null&&PhoneNumberManager.isValidShortCode(number)&&!CallStandard.isLegacy())CallControlService.extension("org-list",new com.google.gson.JsonObject()).whenComplete((v,ex)->client.execute(()->{if(client.currentScreen!=this||ex!=null)return;for(var line:v.getAsJsonArray("lines")){var l=line.getAsJsonObject();if(number.equals(l.get("number").getAsString())){organization=true;name=l.get("name").getAsString();}}}));
  }));}
  private String label(UUID id){var entry=client.getNetworkHandler()==null?null:client.getNetworkHandler().getPlayerListEntry(id);String n=entry==null?BackendNumberService.getNameFor(id):entry.getProfile().name();return n==null||n.isBlank()?id.toString():n;}
@@ -33,7 +37,8 @@ public final class CallCheckScreen extends Screen {
   if(!byNumber){remember();if(PhoneDialer.call(target,name,number))client.setScreen(new ActiveCallScreen());return;}
   call.active=false;
   BackendNumberService.resolveFreshAsync(number).whenComplete((id,e)->client.execute(()->{
-   if(client.currentScreen!=this)return;if(e!=null){error="Не удалось перепроверить номер";update();return;}
+    if(client.currentScreen!=this)return;if(e!=null){error="Не удалось перепроверить номер";update();return;}
+    if(expectedTarget!=null&&!expectedTarget.equals(id)){target=null;error="Номер больше не соответствует контакту";update();PhoneMessages.show(error);return;}
    if(!Objects.equals(id,target)){target=id;name=id==null?"Номер не найден":label(id);error="";voicemailEligible=false;nextVoicemailCheck=0;checkVoicemail();update();PhoneMessages.show("Адресат изменился — проверьте номер ещё раз");return;}
    remember();client.setScreen(new DialAttemptScreen(number,target,target==null?"invalid_number":null));
   }));

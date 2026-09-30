@@ -72,15 +72,15 @@ public class ActiveCallScreen extends Screen {
             .position(buttonX, buttonY)
             .build();
          this.addTexturedButton(muteBtn);
-         boolean alreadyInContacts = (otherUuid != null && SimpleVoiceCallClient.config.hasContact(otherUuid.toString()))
-            || (otherNumber != null && SimpleVoiceCallClient.config.hasContact(otherNumber));
+         String contactNumber = otherNumber != null ? otherNumber : otherUuid == null ? null : PhoneNumberManager.getDisplayNumberFor(otherUuid);
+         boolean alreadyInContacts = contactNumber != null && SimpleVoiceCallClient.config.hasContact(contactNumber);
          String finalOtherName = otherName;
          String finalOtherNumber = otherNumber;
          UUID finalOtherUuid = otherUuid;
          String savedLabel = "";
-         if (finalOtherUuid != null) for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
+         if (contactNumber != null) for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
             if (dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.matches(contact.server)
-               && finalOtherUuid.toString().equals(contact.uuid)) { savedLabel = contact.nickname == null ? "" : contact.nickname; break; }
+               && PhoneNumberManager.onlyDigits(contactNumber).equals(PhoneNumberManager.onlyDigits(contact.number))) { savedLabel = contact.nickname == null ? "" : contact.nickname; break; }
          }
          String finalSavedLabel = savedLabel;
          ButtonWidget contactBtn = ButtonWidget.builder(
@@ -227,7 +227,8 @@ public class ActiveCallScreen extends Screen {
             status = Text.translatable("phone.call.incoming_status");
             titleColor = 5635925;
          } else if (state == CallState.ACTIVE) {
-            boolean savedContact = otherUuid != null && SimpleVoiceCallClient.config.hasContact(otherUuid.toString());
+            String visibleNumber = otherUuid == null ? null : PhoneNumberManager.getDisplayNumberFor(otherUuid);
+            boolean savedContact = visibleNumber != null && SimpleVoiceCallClient.config.hasContact(visibleNumber);
             String callerLabel = otherName != null ? otherName : "";
             if (!savedContact && otherUuid != null) {
                String visibleCallerNumber = PhoneNumberManager.getDisplayNumberFor(otherUuid);

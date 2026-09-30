@@ -26,7 +26,7 @@ public class PhoneNickEditScreen extends Screen {
    private final List<ButtonWidget> texturedButtons = new ArrayList<>();
 
    public PhoneNickEditScreen(Screen parent, UUID targetUuid, String targetNumber, String realName, String currentCustomName) {
-      super(Text.translatable("phone.contact.edit.title"));
+      super(targetUuid == null ? Text.literal("Добавить контакт") : Text.translatable("phone.contact.edit.title"));
       this.parent = parent;
       this.targetUuid = targetUuid;
       this.realName = realName != null ? realName : "";
@@ -78,7 +78,7 @@ public class PhoneNickEditScreen extends Screen {
    private void saveContact() {
       String nickname = this.nameField == null ? "" : this.nameField.getText().trim();
       String number = PhoneNumberManager.onlyDigits(this.numberField == null ? "" : this.numberField.getText());
-      boolean validNumber = number.isEmpty() ? this.targetUuid != null : PhoneNumberManager.isValidKnownNumber(number);
+      boolean validNumber = PhoneNumberManager.isValidKnownNumber(number);
       if (nickname.isEmpty() || !validNumber) {
          PhoneMessages.show(nickname.isEmpty() ? "Введите имя контакта" : "Номер должен содержать 1–3, 6 или 7–15 цифр");
          return;
@@ -88,7 +88,10 @@ public class PhoneNickEditScreen extends Screen {
       ModConfig.Contact found = null;
       for (ModConfig.Contact contact : SimpleVoiceCallClient.config.contacts) {
          if (!ServerProfiles.matches(contact.server)) continue;
-         if ((uuid != null && uuid.equals(contact.uuid)) || (!number.isEmpty() && number.equals(PhoneNumberManager.onlyDigits(contact.number)))) {
+         String savedNumber = PhoneNumberManager.onlyDigits(contact.number);
+         if ((!this.initialNumber.isEmpty() && this.initialNumber.equals(savedNumber))
+            || (this.initialNumber.isEmpty() && savedNumber.isEmpty() && uuid != null && uuid.equals(contact.uuid))
+            || number.equals(savedNumber)) {
             found = contact;
             break;
          }
