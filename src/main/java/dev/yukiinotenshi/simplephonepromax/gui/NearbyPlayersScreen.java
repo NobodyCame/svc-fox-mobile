@@ -10,21 +10,21 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.network.chat.Component;
 
 public class NearbyPlayersScreen extends Screen {
    private final List<NearbyPlayersScreen.PlayerRow> players = new ArrayList<>();
-   private final List<ButtonWidget> texturedButtons = new ArrayList<>();
+   private final List<Button> texturedButtons = new ArrayList<>();
    private double scrollAmount;
    private String searchText = "";
-   private TextFieldWidget searchField;
+   private EditBox searchField;
    private int filterMode;
    private final boolean addToCallMode;
 
@@ -33,16 +33,16 @@ public class NearbyPlayersScreen extends Screen {
    }
 
    public NearbyPlayersScreen(boolean addToCallMode) {
-      super(Text.translatable("phone.nearby.title"));
+      super(Component.translatable("phone.nearby.title"));
       this.addToCallMode = addToCallMode;
    }
 
    protected void init() {
       this.players.clear();
-      if (this.client != null && this.client.getNetworkHandler() != null) {
-         UUID own = this.client.player != null ? this.client.player.getUuid() : null;
+      if (this.minecraft != null && this.minecraft.getConnection() != null) {
+         UUID own = this.minecraft.player != null ? this.minecraft.player.getUUID() : null;
 
-         for (PlayerListEntry entry : this.client.getNetworkHandler().getPlayerList()) {
+         for (PlayerInfo entry : this.minecraft.getConnection().getOnlinePlayers()) {
             UUID uuid = entry.getProfile().id();
             String name = entry.getProfile().name();
             if (uuid != null && name != null && !uuid.equals(own)) {
@@ -51,58 +51,58 @@ public class NearbyPlayersScreen extends Screen {
          }
       }
 
-      dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.refreshPublicDirectoryAsync(this.client);
+      dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.refreshPublicDirectoryAsync(this.minecraft);
       this.players.sort(Comparator.comparing(NearbyPlayersScreen.PlayerRow::name, String.CASE_INSENSITIVE_ORDER));
       this.rebuildButtons();
    }
 
-   public void refreshDirectoryView() { if (this.client != null && this.client.currentScreen == this) this.rebuildButtons(); }
+   public void refreshDirectoryView() { if (this.minecraft != null && dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.isCurrent(this)) this.rebuildButtons(); }
 
-   private void addTexturedButton(ButtonWidget button) {
+   private void addTexturedButton(Button button) {
       this.texturedButtons.add(button);
-      this.addDrawableChild(button);
+      this.addRenderableWidget(button);
    }
 
-   private static void toast(Text message) {
+   private static void toast(Component message) {
       try {
-         MinecraftClient client = MinecraftClient.getInstance();
+         Minecraft client = Minecraft.getInstance();
          if (client != null && client.player != null && message != null) {
-            client.player.sendMessage(message, false);
+            client.player.sendSystemMessage(message);
          }
       } catch (Throwable ignored) {
       }
    }
 
    private void rebuildButtons() {
-      this.clearChildren();
+      this.clearWidgets();
       this.texturedButtons.clear();
       PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
       int searchX = listX(frame);
       int searchY = frame.y() + frame.px(22);
       int filterW=Math.max(36,frame.px(44)),searchW=listW(frame)-filterW-frame.px(2);
       int searchH = Math.max(12, frame.px(14));
-      this.searchField = new TextFieldWidget(this.textRenderer, searchX, searchY, searchW, searchH, Text.translatable("phone.search"));
+      this.searchField = new EditBox(this.font, searchX, searchY, searchW, searchH, Component.translatable("phone.search"));
       this.searchField.setMaxLength(80);
-      this.searchField.setText(this.searchText);
-      this.searchField.setPlaceholder(Text.translatable("phone.search.nearby"));
-      this.searchField.setChangedListener(value -> {
+      this.searchField.setValue(this.searchText);
+      this.searchField.setHint(Component.translatable("phone.search.nearby"));
+      this.searchField.setResponder(value -> {
          this.searchText = value != null ? value : "";
          this.clampScroll();
       });
-      this.addDrawableChild(this.searchField);
+      this.addRenderableWidget(this.searchField);
       String filterLabel=switch(this.filterMode){case 1->"Конт.";case 2->"Вызов";default->"Все";};
       String filterHint=switch(this.filterMode){case 1->"Фильтр: только контакты";case 2->"Фильтр: игроки в звонке";default->"Фильтр: все игроки";};
-      this.addTexturedButton(ButtonWidget.builder(Text.literal(filterLabel),b->{this.filterMode=(this.filterMode+1)%3;this.scrollAmount=0;this.rebuildButtons();})
-         .tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.literal(filterHint)))
-         .size(filterW,searchH).position(searchX+searchW+frame.px(2),searchY).build());
+      this.addTexturedButton(Button.builder(Component.literal(filterLabel),b->{this.filterMode=(this.filterMode+1)%3;this.scrollAmount=0;this.rebuildButtons();})
+         .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(filterHint)))
+         .size(filterW,searchH).pos(searchX+searchW+frame.px(2),searchY).build());
       int backW = Math.max(68, frame.px(88));
       int backH = Math.max(12, frame.px(14));
       int backY = Math.min(this.height - backH - 4, frame.bottom() + Math.max(3, frame.px(3)));
-      this.addTexturedButton(ButtonWidget.builder(Text.translatable("phone.settings.back"), button -> {
-         if (this.client != null) {
-            this.client.setScreen(this.addToCallMode ? new PhoneMainScreen(true) : new PhoneMainScreen());
+      this.addTexturedButton(Button.builder(Component.translatable("phone.settings.back"), button -> {
+         if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(this.addToCallMode ? new PhoneMainScreen(true) : new PhoneMainScreen());
          }
-      }).size(backW, backH).position(frame.centerX() - backW / 2, backY).build());
+      }).size(backW, backH).pos(frame.centerX() - backW / 2, backY).build());
    }
 
    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
@@ -117,7 +117,7 @@ public class NearbyPlayersScreen extends Screen {
       return this.handleRowClick(mouseX, mouseY);
    }
 
-   public boolean mouseClicked(Click click, boolean doubleClick) {
+   public boolean mouseClicked(MouseButtonEvent click, boolean doubleClick) {
       return super.mouseClicked(click, doubleClick) || this.handleRowClick(click.x(), click.y());
    }
 
@@ -155,9 +155,9 @@ public class NearbyPlayersScreen extends Screen {
                this.addPlayer(row);
             } else {
                if (this.canCallFromDirectory(row)) {
-                  this.client.setScreen(new CallCheckScreen(row.uuid(), row.name()));
+                  this.minecraft.setScreenAndShow(new CallCheckScreen(row.uuid(), row.name()));
                } else {
-                  toast(Text.literal("Номер скрыт. Добавьте его в контакты или наберите вручную."));
+                  toast(Component.literal("Номер скрыт. Добавьте его в контакты или наберите вручную."));
                }
             }
             return true;
@@ -220,7 +220,7 @@ public class NearbyPlayersScreen extends Screen {
       }
 
       String number = PhoneNumberManager.getVisibleNumberFor(row.uuid());
-      if (this.client != null) this.client.setScreen(new PhoneNickEditScreen(this, row.uuid(), number, row.name(), ""));
+      if (this.minecraft != null) this.minecraft.setScreenAndShow(new PhoneNickEditScreen(this, row.uuid(), number, row.name(), ""));
    }
 
    private void invitePlayer(NearbyPlayersScreen.PlayerRow row) {
@@ -229,22 +229,22 @@ public class NearbyPlayersScreen extends Screen {
       }
 
       if (!SimpleVoiceCallClient.callManager.isInActiveCall()) {
-         toast(Text.translatable("phone.add_call.no_active_call"));
-         if (this.client != null) {
-            this.client.setScreen(new PhoneMainScreen());
+         toast(Component.translatable("phone.add_call.no_active_call"));
+         if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(new PhoneMainScreen());
          }
       } else if (ModNetworking.isPlayerInActiveCallGroup(row.uuid())) {
-         toast(Text.translatable("phone.add_call.already_here", row.name()));
-         if (this.client != null) {
-            this.client.setScreen(new ActiveCallScreen());
+         toast(Component.translatable("phone.add_call.already_here", row.name()));
+         if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(new ActiveCallScreen());
          }
       } else if (ModNetworking.inviteToActiveCall(row.uuid(), row.name())) {
-         toast(Text.translatable("phone.add_call.invite_sent", row.name()));
-         if (this.client != null) {
-            this.client.setScreen(new ActiveCallScreen());
+         toast(Component.translatable("phone.add_call.invite_sent", row.name()));
+         if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(new ActiveCallScreen());
          }
       } else {
-         toast(Text.translatable("phone.add_call.unavailable", row.name()));
+         toast(Component.translatable("phone.add_call.unavailable", row.name()));
       }
    }
 
@@ -262,11 +262,11 @@ public class NearbyPlayersScreen extends Screen {
       this.rebuildButtons();
    }
 
-   public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+   public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
       WallpaperEngine.render(context, this.width, this.height);
       PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
       PhoneGuiTextures.drawUniversalBackground(context, frame, mouseX, mouseY);
-      PhoneGuiTextures.drawCenteredTrimmedText(context, this.textRenderer, this.title, frame.centerX(), frame.y() + frame.px(7), frame.px(150), -1);
+      PhoneGuiTextures.drawCenteredTrimmedText(context, this.font, this.title, frame.centerX(), frame.y() + frame.px(7), frame.px(150), -1);
 
       int rowX = listX(frame);
       int rowY = listY(frame);
@@ -280,7 +280,7 @@ public class NearbyPlayersScreen extends Screen {
          List<NearbyPlayersScreen.PlayerRow> visiblePlayers = this.visiblePlayers();
          if(visiblePlayers.isEmpty()) {
             String empty=this.searchText.isBlank()?"Подходящих игроков нет":"Ничего не найдено";
-            PhoneGuiTextures.drawCenteredTrimmedText(context,this.textRenderer,Text.literal(empty),frame.centerX(),rowY+frame.px(34),rowW-8,0xFFBFC6D0);
+            PhoneGuiTextures.drawCenteredTrimmedText(context,this.font,Component.literal(empty),frame.centerX(),rowY+frame.px(34),rowW-8,0xFFBFC6D0);
          }
          for (int i = 0; i < visiblePlayers.size(); i++) {
             NearbyPlayersScreen.PlayerRow row = visiblePlayers.get(i);
@@ -312,7 +312,7 @@ public class NearbyPlayersScreen extends Screen {
             String text = (inPhoneCall ? "☎ " : "") + row.name();
             PhoneGuiTextures.drawTrimmedText(
                context,
-               this.textRenderer,
+               this.font,
                text,
                rowX + frame.px(17),
                textY,
@@ -322,11 +322,11 @@ public class NearbyPlayersScreen extends Screen {
             );
             String numberLabel=number==null?"номер скрыт · только набор/контакт":PhoneNumberManager.formatNumber(number);
             String subtitle=numberLabel+(added?" · контакт":" · рядом")+(inPhoneCall?" · разговор":"");
-            PhoneGuiTextures.drawTrimmedText(context,this.textRenderer,subtitle,rowX+frame.px(17),y+frame.px(13),Math.max(20,addX-rowX-frame.px(20)),0xFFBFC6D0,false);
+            PhoneGuiTextures.drawTrimmedText(context,this.font,subtitle,rowX+frame.px(17),y+frame.px(13),Math.max(20,addX-rowX-frame.px(20)),0xFFBFC6D0,false);
             PhoneGuiTextures.drawButtonRect(
                context,
-               this.textRenderer,
-               Text.literal(added ? "✓" : "+"),
+               this.font,
+               Component.literal(added ? "✓" : "+"),
                addX,
                actionY,
                actionW,
@@ -336,8 +336,8 @@ public class NearbyPlayersScreen extends Screen {
             );
             PhoneGuiTextures.drawButtonRect(
                context,
-               this.textRenderer,
-               Text.literal(blocked ? "✓" : "×"),
+               this.font,
+               Component.literal(blocked ? "✓" : "×"),
                blockX,
                actionY,
                actionW,
@@ -355,22 +355,22 @@ public class NearbyPlayersScreen extends Screen {
          }
       }
 
-      super.render(context,mouseX,mouseY,delta);PhoneGuiTextures.widgets(this,context,mouseX,mouseY);
-      for (ButtonWidget button : this.texturedButtons) {
-         PhoneGuiTextures.drawButton(context, this.textRenderer, button, mouseX, mouseY);
+      super.extractRenderState(context,mouseX,mouseY,delta);PhoneGuiTextures.widgets(this,context,mouseX,mouseY);
+      for (Button button : this.texturedButtons) {
+         PhoneGuiTextures.drawButton(context, this.font, button, mouseX, mouseY);
       }
    }
 
-   public boolean shouldPause() {
+   public boolean isPauseScreen() {
       return false;
    }
 
-   public void close() {
-      if (this.addToCallMode && this.client != null && SimpleVoiceCallClient.callManager.isInActiveCall()) {
-         this.client.setScreen(new ActiveCallScreen());
+   public void onClose() {
+      if (this.addToCallMode && this.minecraft != null && SimpleVoiceCallClient.callManager.isInActiveCall()) {
+         this.minecraft.setScreenAndShow(new ActiveCallScreen());
       } else {
          PhoneClientActions.putAwayPhone();
-         super.close();
+         super.onClose();
       }
    }
 

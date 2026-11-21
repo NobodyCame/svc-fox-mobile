@@ -7,8 +7,8 @@ import dev.yukiinotenshi.simplephonepromax.gui.ActiveCallScreen;
 import dev.yukiinotenshi.simplephonepromax.gui.IncomingCallScreen;
 import java.lang.reflect.*;
 import java.util.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 /** Delegates to the separately installed Simple Voice Call JAR, never an embedded copy. */
 public final class LegacyCallBridge {
@@ -66,8 +66,8 @@ public final class LegacyCallBridge {
       SimpleVoiceCallClient.LOGGER.error("Installed Simple Voice Call mod is incompatible with the legacy bridge; calls disabled",error);
    }
    public static void unavailable() {
-      MinecraftClient c=MinecraftClient.getInstance();
-      if(c.player!=null)c.player.sendMessage(Text.translatable("phone.standard.original_required"),false);
+      Minecraft c=Minecraft.getInstance();
+      if(c.player!=null)c.player.sendSystemMessage(Component.translatable("phone.standard.original_required"));
    }
    public static Object manager(String name,Object...args) {
       if(!ready)return null;
@@ -110,8 +110,8 @@ public final class LegacyCallBridge {
          String now=state();
          if(!now.equals(lastState)) {
             ringingAt=now.endsWith("RINGING")?System.currentTimeMillis():0;
-            MinecraftClient c=MinecraftClient.getInstance();
-            if(now.equals("NONE")&&(c.currentScreen instanceof ActiveCallScreen||c.currentScreen instanceof IncomingCallScreen))c.setScreen(null);
+            Minecraft c=Minecraft.getInstance();
+            if(now.equals("NONE")&&(dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen||dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof IncomingCallScreen))c.setScreenAndShow(null);
             lastState=now;
          }
       }catch(ReflectiveOperationException|LinkageError e){fail(e);}

@@ -1,12 +1,12 @@
 package dev.yukiinotenshi.simplephonepromax.gui;
 
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 final class PhoneGuiTextures {
    static final int BASE_WIDTH = 195;
@@ -40,13 +40,13 @@ final class PhoneGuiTextures {
    private static final Identifier FOX_SLEEPING = id("fox_sleeping");
 
 
-   static void fullBackground(DrawContext context,int width,int height,int mouseX,int mouseY){dev.yukiinotenshi.simplephonepromax.sound.WallpaperEngine.render(context,width,height);context.fill(0,0,width,height,0x99000000);int size=layout(width,height).px(20);drawFoxMascot(context,width-size-16,12,size,mouseX,mouseY);}
-   static void widgets(net.minecraft.client.gui.screen.Screen screen,DrawContext context,int mx,int my) {}
+   static void fullBackground(GuiGraphicsExtractor context,int width,int height,int mouseX,int mouseY){dev.yukiinotenshi.simplephonepromax.sound.WallpaperEngine.render(context,width,height);context.fill(0,0,width,height,0x99000000);int size=layout(width,height).px(20);drawFoxMascot(context,width-size-16,12,size,mouseX,mouseY);}
+   static void widgets(net.minecraft.client.gui.screens.Screen screen,GuiGraphicsExtractor context,int mx,int my) {}
    private PhoneGuiTextures() {
    }
 
    private static Identifier id(String path) {
-      return Identifier.of(SimpleVoiceCallClient.RESOURCE_ID, path);
+      return Identifier.fromNamespaceAndPath(SimpleVoiceCallClient.RESOURCE_ID, path);
    }
 
    static Frame layout(int screenWidth, int screenHeight) {
@@ -59,27 +59,27 @@ final class PhoneGuiTextures {
       return new Frame(x, y, width, height, scale);
    }
 
-   static void drawPhone(DrawContext context, Frame frame, int mouseX, int mouseY) {
+   static void drawPhone(GuiGraphicsExtractor context, Frame frame, int mouseX, int mouseY) {
       drawPanel(context, MAIN_PHONE, frame);
       drawFoxMascot(context, frame, mouseX, mouseY);
    }
 
-   static void drawUniversalBackground(DrawContext context, Frame frame, int mouseX, int mouseY) {
+   static void drawUniversalBackground(GuiGraphicsExtractor context, Frame frame, int mouseX, int mouseY) {
       drawPanel(context, UNIVERSAL_BACKGROUND, frame);
       drawFoxMascot(context, frame, mouseX, mouseY);
    }
 
-   static void drawContactList(DrawContext context, Frame frame, int mouseX, int mouseY) {
+   static void drawContactList(GuiGraphicsExtractor context, Frame frame, int mouseX, int mouseY) {
       drawPanel(context, CONTACT_LIST, frame);
       drawFoxMascot(context, frame, mouseX, mouseY);
    }
 
-   static void drawTabList(DrawContext context, Frame frame, int mouseX, int mouseY) {
+   static void drawTabList(GuiGraphicsExtractor context, Frame frame, int mouseX, int mouseY) {
       drawPanel(context, TAB_LIST, frame);
       drawFoxMascot(context, frame, mouseX, mouseY);
    }
 
-   private static void drawFoxMascot(DrawContext context, Frame frame, int mouseX, int mouseY) {
+   private static void drawFoxMascot(GuiGraphicsExtractor context, Frame frame, int mouseX, int mouseY) {
       int size = frame.px(20);
       int x = frame.x() + frame.px(158);
       // Large GUI scales can place the panel near the top edge; keep the full
@@ -88,14 +88,14 @@ final class PhoneGuiTextures {
       drawFoxMascot(context, x, y, size, mouseX, mouseY);
    }
 
-   private static void drawFoxMascot(DrawContext context, int x, int y, int size, int mouseX, int mouseY) {
+   private static void drawFoxMascot(GuiGraphicsExtractor context, int x, int y, int size, int mouseX, int mouseY) {
       boolean hovered = mouseX >= x && mouseX < x + size && mouseY >= y && mouseY < y + size;
       Identifier texture = hovered ? FOX_HIGHLIGHTED : FOX_SLEEPING;
-      context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, texture, x, y, size, size);
+      context.blitSprite(RenderPipelines.GUI_TEXTURED, texture, x, y, size, size);
    }
 
-   private static void drawPanel(DrawContext context, Identifier texture, Frame frame) {
-      context.drawTexture(
+   private static void drawPanel(GuiGraphicsExtractor context, Identifier texture, Frame frame) {
+      context.blit(
          RenderPipelines.GUI_TEXTURED,
          texture,
          frame.x(),
@@ -111,37 +111,37 @@ final class PhoneGuiTextures {
       );
    }
 
-   static void drawScreenWallpaper(DrawContext context, Frame frame) {
+   static void drawScreenWallpaper(GuiGraphicsExtractor context, Frame frame) {
    }
 
-   static void drawScreenShade(DrawContext context, Frame frame, int alpha) {
+   static void drawScreenShade(GuiGraphicsExtractor context, Frame frame, int alpha) {
    }
 
-   static void drawCenteredTrimmedText(DrawContext context, TextRenderer textRenderer, Text text, int centerX, int y, int maxWidth, int color) {
-      String trimmed = textRenderer.trimToWidth(text.getString(), maxWidth);
-      drawText(context, textRenderer, trimmed, centerX - textRenderer.getWidth(trimmed) / 2, y, color, true);
+   static void drawCenteredTrimmedText(GuiGraphicsExtractor context, Font textRenderer, Component text, int centerX, int y, int maxWidth, int color) {
+      String trimmed = textRenderer.plainSubstrByWidth(text.getString(), maxWidth);
+      drawText(context, textRenderer, trimmed, centerX - textRenderer.width(trimmed) / 2, y, color, true);
    }
 
-   static void drawTrimmedText(DrawContext context, TextRenderer textRenderer, String text, int x, int y, int maxWidth, int color, boolean shadow) {
-      drawText(context, textRenderer, textRenderer.trimToWidth(text, maxWidth), x, y, color, shadow);
+   static void drawTrimmedText(GuiGraphicsExtractor context, Font textRenderer, String text, int x, int y, int maxWidth, int color, boolean shadow) {
+      drawText(context, textRenderer, textRenderer.plainSubstrByWidth(text, maxWidth), x, y, color, shadow);
    }
 
-   static void drawText(DrawContext context, TextRenderer textRenderer, String text, int x, int y, int color, boolean shadow) {
-      context.createNewRootLayer();
-      context.drawText(textRenderer, text, x, y, opaque(color), shadow);
+   static void drawText(GuiGraphicsExtractor context, Font textRenderer, String text, int x, int y, int color, boolean shadow) {
+      context.nextStratum();
+      context.text(textRenderer, text, x, y, opaque(color), shadow);
    }
 
    static int opaque(int color) {
       return (color & 0xFF000000) == 0 ? color | 0xFF000000 : color;
    }
 
-   static void drawButton(DrawContext context, TextRenderer textRenderer, ButtonWidget button, int mouseX, int mouseY) {
+   static void drawButton(GuiGraphicsExtractor context, Font textRenderer, Button button, int mouseX, int mouseY) {
       // ButtonWidget already renders the correct Minecraft-style button.
       // The helper stays as a no-op so old screen code can keep one path.
    }
 
    static void drawButtonRect(
-      DrawContext context, TextRenderer textRenderer, Text label, int x, int y, int width, int height, boolean hovered, boolean active
+      GuiGraphicsExtractor context, Font textRenderer, Component label, int x, int y, int width, int height, boolean hovered, boolean active
    ) {
       int fill = !active ? 0xFF555555 : hovered ? 0xFF9A9A9A : 0xFF777777;
       context.fill(x, y, x + width, y + height, 0xFF000000);
@@ -150,22 +150,22 @@ final class PhoneGuiTextures {
       context.fill(x + 1, y + 1, x + 2, y + height - 1, 0xFFFFFFFF);
       context.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, 0xFF333333);
       context.fill(x + width - 2, y + 1, x + width - 1, y + height - 1, 0xFF333333);
-      String text = textRenderer.trimToWidth(label.getString(), Math.max(4, width - 6));
+      String text = textRenderer.plainSubstrByWidth(label.getString(), Math.max(4, width - 6));
       int color = active ? -1 : 0xFFA0A0A0;
-      drawText(context, textRenderer, text, x + (width - textRenderer.getWidth(text)) / 2, y + (height - 8) / 2, color, true);
+      drawText(context, textRenderer, text, x + (width - textRenderer.width(text)) / 2, y + (height - 8) / 2, color, true);
    }
 
-   static void drawIncomingPopup(DrawContext context, Frame frame, int yOffset) {
+   static void drawIncomingPopup(GuiGraphicsExtractor context, Frame frame, int yOffset) {
       int width = frame.px(236);
       int height = frame.px(34);
       int x = frame.centerX() - width / 2;
       int y = frame.y() + frame.px(yOffset);
-      context.drawTexture(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, width, height, 236, 34, 236, 34);
+      context.blit(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, width, height, 236, 34, 236, 34);
    }
 
-   static void drawIncomingToast(DrawContext context, TextRenderer textRenderer, String callerName, long ringingStartedAtMs) {drawToast(context,textRenderer,"Входящий вызов",callerName,ringingStartedAtMs);}
-   static void drawToast(DrawContext context,TextRenderer textRenderer,String heading,String callerName,long ringingStartedAtMs) {
-      int screenW = context.getScaledWindowWidth();
+   static void drawIncomingToast(GuiGraphicsExtractor context, Font textRenderer, String callerName, long ringingStartedAtMs) {drawToast(context,textRenderer,"Входящий вызов",callerName,ringingStartedAtMs);}
+   static void drawToast(GuiGraphicsExtractor context,Font textRenderer,String heading,String callerName,long ringingStartedAtMs) {
+      int screenW = context.guiWidth();
       int popupW = 236;
       int popupH = 34;
       long now = System.currentTimeMillis();
@@ -174,8 +174,8 @@ final class PhoneGuiTextures {
       float overshoot = t < 0.72F ? t / 0.72F * 1.08F : 1.08F - (t - 0.72F) / 0.28F * 0.08F;
       int x = screenW - 8 - Math.round(popupW * overshoot);
       int y = 10;
-      context.createNewRootLayer();
-      context.drawTexture(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, popupW, popupH, popupW, popupH, popupW, popupH);
+      context.nextStratum();
+      context.blit(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, popupW, popupH, popupW, popupH, popupW, popupH);
       int frame = (int)((now / 220L) % 4L);
       int notesX = x + popupW - 31;
       int notesY = y + 7;
@@ -186,14 +186,14 @@ final class PhoneGuiTextures {
       drawTrimmedText(context, textRenderer, callerName != null ? callerName : "", x + 14, y + 18, popupW - 60, -1, true);
    }
 
-   private static void drawPixelNote(DrawContext context, int x, int y, int scale, int color) {
+   private static void drawPixelNote(GuiGraphicsExtractor context, int x, int y, int scale, int color) {
       int s = Math.max(1, scale);
       int shadow = 0xAA000000;
       drawPixelNoteShape(context, x + s, y + s, s, shadow);
       drawPixelNoteShape(context, x, y, s, opaque(color));
    }
 
-   private static void drawPixelNoteShape(DrawContext context, int x, int y, int s, int color) {
+   private static void drawPixelNoteShape(GuiGraphicsExtractor context, int x, int y, int s, int color) {
       context.fill(x + 5 * s, y, x + 7 * s, y + 9 * s, color);
       context.fill(x + 7 * s, y, x + 11 * s, y + 2 * s, color);
       context.fill(x + 9 * s, y + 2 * s, x + 12 * s, y + 4 * s, color);
@@ -201,8 +201,8 @@ final class PhoneGuiTextures {
       context.fill(x, y + 8 * s, x + 7 * s, y + 10 * s, color);
    }
 
-   static void drawContactItem(DrawContext context, Frame frame, int x, int y, int width, int height, boolean highlighted) {
-      context.drawTexture(
+   static void drawContactItem(GuiGraphicsExtractor context, Frame frame, int x, int y, int width, int height, boolean highlighted) {
+      context.blit(
          RenderPipelines.GUI_TEXTURED,
          highlighted ? CONTACT_ITEM_HIGHLIGHTED : CONTACT_ITEM,
          x,
@@ -218,8 +218,8 @@ final class PhoneGuiTextures {
       );
    }
 
-   static void drawTabItem(DrawContext context, Frame frame, int x, int y, int width, int height, boolean highlighted) {
-      context.drawTexture(
+   static void drawTabItem(GuiGraphicsExtractor context, Frame frame, int x, int y, int width, int height, boolean highlighted) {
+      context.blit(
          RenderPipelines.GUI_TEXTURED,
          highlighted ? TAB_ITEM_HIGHLIGHTED : TAB_ITEM,
          x,
@@ -235,8 +235,8 @@ final class PhoneGuiTextures {
       );
    }
 
-   static void drawOnlineIcon(DrawContext context, int x, int y, boolean online) {
-      context.drawTexture(RenderPipelines.GUI_TEXTURED, online ? ONLINE : OFFLINE, x, y, 0.0F, 0.0F, 10, 8, 10, 8);
+   static void drawOnlineIcon(GuiGraphicsExtractor context, int x, int y, boolean online) {
+      context.blit(RenderPipelines.GUI_TEXTURED, online ? ONLINE : OFFLINE, x, y, 0.0F, 0.0F, 10, 8, 10, 8);
    }
 
    static final class Frame {

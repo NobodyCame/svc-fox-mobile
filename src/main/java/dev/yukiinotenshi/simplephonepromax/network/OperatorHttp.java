@@ -5,9 +5,11 @@ import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import javax.net.ssl.*;
 import java.time.Duration;
-/** Trust bundled operator CA only for the known IP; all other services use system trust. */
+/** The public hostname uses JVM system trust; the bundled CA remains for legacy IP URLs. */
 public final class OperatorHttp {
- public static final String URL="https://92.5.184.221/svc-fox-mobile";
+ public static final String URL="https://yukiinotenshi.dynv6.net/svc-fox-mobile";
+ private static final String LEGACY_HOST="92.5.184.221";
+ private static final String CURRENT_HOST="yukiinotenshi.dynv6.net";
  private static final HttpClient DEFAULT=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(4)).build();
  private static final HttpClient OPERATOR=create();
  private static HttpClient create(){try(var in=OperatorHttp.class.getResourceAsStream("/operator/root.crt")){
@@ -17,12 +19,24 @@ public final class OperatorHttp {
   var ssl=SSLContext.getInstance("TLS");ssl.init(null,tm.getTrustManagers(),null);
   return HttpClient.newBuilder().sslContext(ssl).connectTimeout(Duration.ofSeconds(4)).build();
  }catch(Exception e){throw new ExceptionInInitializerError(e);}}
- public static HttpClient client(URI uri){return "https".equalsIgnoreCase(uri.getScheme())&&"92.5.184.221".equals(uri.getHost())?OPERATOR:DEFAULT;}
+ public static HttpClient client(URI uri){return "https".equalsIgnoreCase(uri.getScheme())&&LEGACY_HOST.equals(uri.getHost())?OPERATOR:DEFAULT;}
+ public static String migrateLegacyHostOnce(String configured){
+  if(configured==null||configured.isBlank())return URL;
+  try{
+   URI uri=URI.create(configured.trim());
+   if(!LEGACY_HOST.equalsIgnoreCase(uri.getHost()))return configured.trim();
+   String path=uri.getRawPath()==null?"":uri.getRawPath();
+   if(path.isEmpty())path="/svc-fox-mobile";
+   String userInfo=uri.getRawUserInfo()==null?"":uri.getRawUserInfo()+"@";
+   String port=uri.getPort()<0?"":":"+uri.getPort();
+   String query=uri.getRawQuery()==null?"":"?"+uri.getRawQuery();
+   String fragment=uri.getRawFragment()==null?"":"#"+uri.getRawFragment();
+   return URI.create("https://"+userInfo+CURRENT_HOST+port+path+query+fragment).toString();
+  }catch(IllegalArgumentException ignored){return configured.trim();}
+ }
  public static String upgrade(String url){
   if(url==null||url.isBlank())return URL;
   String clean=url.trim().replaceAll("/+$","");
-  if(clean.equals("http://92.5.184.221/simple-phone")||clean.equals("https://92.5.184.221/simple-phone")
-    ||clean.equals("http://92.5.184.221/svc-fox-mobile"))return URL;
   return clean;
  }
 }

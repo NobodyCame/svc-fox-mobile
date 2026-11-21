@@ -7,7 +7,7 @@
 ```text
 Minecraft-клиент с Fox Mobile
   └─ HTTPS :443
-      https://92.5.184.221/svc-fox-mobile/<API>
+      https://yukiinotenshi.dynv6.net/svc-fox-mobile/<API>
         └─ Caddy: TLS и обратное проксирование
             └─ HTTP только на loopback :8787
                 └─ Python operator backend
@@ -19,11 +19,11 @@ Backend — это Python HTTP-сервис, а не Oracle Database. Прило
 
 ## Протокол и адреса
 
-- Основной адрес клиента: `https://92.5.184.221/svc-fox-mobile`.
+- Основной адрес клиента: `https://yukiinotenshi.dynv6.net/svc-fox-mobile`.
 - Старый префикс `/simple-phone` оставлен как совместимый alias на сервере. Клиент Fox Mobile канонизирует известные старые адреса к основному HTTPS URL.
 - Снаружи используется HTTPS/TLS на TCP-порту `443`. Python-сервис не должен быть доступен из интернета напрямую: он привязан к loopback `127.0.0.1:8787`; HTTP на этом участке остаётся внутри VPS.
 - Caddy принимает оба публичных пути и снимает префикс перед передачей запроса Python-сервису. Например, `/svc-fox-mobile/health` доходит до backend как `/health`.
-- Для HTTPS-клиент Fox Mobile использует сертификатный trust anchor, встроенный в JAR по пути `src/main/resources/operator/root.crt`. Для основного IP создаётся отдельный HTTP-клиент с этим trust store; проверка TLS не отключается и системное хранилище JVM не меняется.
+- Для публичного домена клиент использует стандартную проверку сертификата JVM. Встроенный trust anchor `src/main/resources/operator/root.crt` нужен только для совместимости с прямым HTTPS-адресом по IP; проверка TLS не отключается и системное хранилище JVM не меняется.
 - Встроенный сертификат — публичные данные для проверки сервера, не приватный ключ. При ротации сертификата/цепочки нужно согласованно обновить конфигурацию Caddy и trust anchor в клиенте, собрать и выпустить совместимый JAR.
 
 ## API и доступ
@@ -44,13 +44,13 @@ Backend — это Python HTTP-сервис, а не Oracle Database. Прило
 На клиентском компьютере проверить TCP-доступность порта:
 
 ```powershell
-Test-NetConnection 92.5.184.221 -Port 443
+Test-NetConnection yukiinotenshi.dynv6.net -Port 443
 ```
 
 Проверить HTTPS и сертификат командой curl, передав публичный trust anchor из клона проекта:
 
 ```powershell
-curl.exe --silent --show-error --max-time 10 --cacert .\src\main\resources\operator\root.crt https://92.5.184.221/svc-fox-mobile/health
+curl.exe --silent --show-error --max-time 10 https://yukiinotenshi.dynv6.net/svc-fox-mobile/health
 ```
 
 Ожидаемый ответ: JSON с `"ok": true`. На Windows сборка curl с Schannel может остановиться на `CERT_REVOCATION_STATUS_UNKNOWN`, даже когда TLS-соединение и сервер доступны. Для диагностики можно повторить с `--ssl-no-revoke`: это отключает только проверку отзыва сертификата в curl, сохраняя проверку доверенной цепочки. Такой результат полезен для отделения ошибки CRL/OCSP Windows от доступности сервиса, но не заменяет проверку через Fox Mobile и не является настройкой, которую нужно применять к моду.
@@ -66,7 +66,7 @@ curl --fail --silent --show-error http://127.0.0.1:8787/health
 Для публичной проверки с VPS или другой машины:
 
 ```bash
-curl --fail --silent --show-error https://92.5.184.221/svc-fox-mobile/health
+curl --fail --silent --show-error https://yukiinotenshi.dynv6.net/svc-fox-mobile/health
 ```
 
 Команды проверки не требуют токена и не изменяют данные. Не публикуйте полные логи, если в них могут попасть персональные данные, номера, адреса или заголовки аутентификации.
@@ -79,6 +79,6 @@ curl --fail --silent --show-error https://92.5.184.221/svc-fox-mobile/health
 
 ## Основание и известные ограничения
 
-Публичный HTTPS, путь `/svc-fox-mobile`, alias `/simple-phone`, loopback-порт `8787` и локальная проверка health зафиксированы в локальном `backend/README.md`; последний проверенный production deployment описан в локальном `docs/DEPLOYMENT_STATUS_1_3_14.md`. Python backend и deployment-конфигурация намеренно не входят в публичный GitHub-репозиторий. Текущую живую доступность документа проверили через `https://92.5.184.221/svc-fox-mobile/health` с сертификатным trust anchor проекта.
+Публичный HTTPS, путь `/svc-fox-mobile`, alias `/simple-phone`, loopback-порт `8787` и локальная проверка health зафиксированы в локальном `backend/README.md`; последний проверенный production deployment описан в локальном `docs/DEPLOYMENT_STATUS_1_3_14.md`. Python backend и deployment-конфигурация намеренно не входят в публичный GitHub-репозиторий. Актуальный адрес в клиенте — `https://yukiinotenshi.dynv6.net/svc-fox-mobile`; проверка текущей доступности домена не входит в этот документ.
 
 Транспорт клиента использует HTTPS и сертификатную проверку. Аутентификация API не подтверждает владение Minecraft-аккаунтом. Шифрование голосовых в SQLite защищает данные на диске, но само по себе не означает сквозное шифрование: backend обрабатывает сообщение для доставки.

@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public final class BackendNumberService {
    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -103,7 +103,7 @@ public final class BackendNumberService {
       }
    }
 
-   public static void tick(MinecraftClient client) {
+   public static void tick(Minecraft client) {
       if (!isEnabled() || client == null || client.player == null) {
          return;
       }
@@ -132,7 +132,7 @@ public final class BackendNumberService {
       return PUBLIC_NUMBERS.get(uuid);
    }
 
-   public static void refreshPublicDirectoryAsync(MinecraftClient client) {
+   public static void refreshPublicDirectoryAsync(Minecraft client) {
       if (!isEnabled() || client == null || client.player == null) return;
       String server = currentServerAddress(client).trim().toLowerCase(java.util.Locale.ROOT);
       if (server.isEmpty()) return;
@@ -166,7 +166,7 @@ public final class BackendNumberService {
          .whenComplete((response, error) -> {
             publicDirectoryInFlight = false;
             if (!server.equals(publicDirectoryServer)) {
-               MinecraftClient mc = MinecraftClient.getInstance();
+               Minecraft mc = Minecraft.getInstance();
                if (mc != null) mc.execute(() -> refreshPublicDirectoryAsync(mc));
                return;
             }
@@ -184,9 +184,9 @@ public final class BackendNumberService {
                }
                PUBLIC_NUMBERS.clear();
                PUBLIC_NUMBERS.putAll(refreshed);
-               MinecraftClient mc = MinecraftClient.getInstance();
+               Minecraft mc = Minecraft.getInstance();
                if (mc != null) mc.execute(() -> {
-                  if (mc.currentScreen instanceof dev.yukiinotenshi.simplephonepromax.gui.NearbyPlayersScreen screen) screen.refreshDirectoryView();
+                  if (dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof dev.yukiinotenshi.simplephonepromax.gui.NearbyPlayersScreen screen) screen.refreshDirectoryView();
                });
             } catch (Throwable ignored) {
             }
@@ -260,13 +260,13 @@ public final class BackendNumberService {
       }).exceptionally(t -> {if(fresh)throw new java.util.concurrent.CompletionException(t);return null;});
    }
 
-   public static void registerSelfAsync(MinecraftClient client) {
+   public static void registerSelfAsync(Minecraft client) {
       if (requestInFlight || client == null || client.player == null || !isEnabled()) {
          return;
       }
 
       requestInFlight = true;
-      UUID uuid = client.player.getUuid();
+      UUID uuid = client.player.getUUID();
       String deviceId = SimpleVoiceCallClient.config.backendDeviceId;
       if (deviceId == null || deviceId.isBlank()) {
          deviceId = UUID.randomUUID().toString();
@@ -388,15 +388,15 @@ public final class BackendNumberService {
       return URI.create(base + path);
    }
 
-   private static String currentServerAddress(MinecraftClient client) {
+   private static String currentServerAddress(Minecraft client) {
       try {
-         if (client.getCurrentServerEntry() != null && client.getCurrentServerEntry().address != null) {
-            return client.getCurrentServerEntry().address;
+         if (client.getCurrentServer() != null && client.getCurrentServer().ip != null) {
+            return client.getCurrentServer().ip;
          }
       } catch (Throwable ignored) {
       }
 
-      return client.isInSingleplayer() ? "singleplayer" : "unknown";
+      return client.isLocalServer() ? "singleplayer" : "unknown";
    }
 
    private static class CacheData {

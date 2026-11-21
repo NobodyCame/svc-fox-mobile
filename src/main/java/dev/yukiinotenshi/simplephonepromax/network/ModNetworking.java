@@ -118,8 +118,8 @@ public class ModNetworking {
    }
 
    public static void onVoicechatDisconnected() {
-      if (CallStandard.isLegacy()) { net.minecraft.client.MinecraftClient.getInstance().execute(LegacyCallBridge::disconnect); return; }
-      net.minecraft.client.MinecraftClient.getInstance().execute(CallControlService::reset);
+      if (CallStandard.isLegacy()) { net.minecraft.client.Minecraft.getInstance().execute(LegacyCallBridge::disconnect); return; }
+      net.minecraft.client.Minecraft.getInstance().execute(CallControlService::reset);
       VoiceCallTransport.onDisconnected();
    }
 }

@@ -11,18 +11,18 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.entity.Entity;
-import net.minecraft.text.Text;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 
 public class PhoneMainScreen extends Screen {
    private StringBuilder currentNumber = new StringBuilder();
-   private final List<ButtonWidget> texturedButtons = new ArrayList<>();
+   private final List<Button> texturedButtons = new ArrayList<>();
    private final boolean addToCallMode;
 
    public PhoneMainScreen() {
@@ -30,7 +30,7 @@ public class PhoneMainScreen extends Screen {
    }
 
    public PhoneMainScreen(boolean addToCallMode) {
-      super(Text.translatable("phone.screen.title"));
+      super(Component.translatable("phone.screen.title"));
       this.addToCallMode = addToCallMode;
       PhoneNumberManager.load();
    }
@@ -83,16 +83,16 @@ public class PhoneMainScreen extends Screen {
    }
 
    private static UUID getEntryId(Object e) {
-      return e instanceof PlayerListEntry entry ? entry.getProfile().id() : null;
+      return e instanceof PlayerInfo entry ? entry.getProfile().id() : null;
    }
    private static String getEntryName(Object e) {
-      return e instanceof PlayerListEntry entry ? entry.getProfile().name() : null;
+      return e instanceof PlayerInfo entry ? entry.getProfile().name() : null;
    }
 
    private void registerAllPlayers() {
-      if (this.client != null && this.client.getNetworkHandler() != null) {
+      if (this.minecraft != null && this.minecraft.getConnection() != null) {
          try {
-            for (PlayerListEntry entry : this.client.getNetworkHandler().getPlayerList()) {
+            for (PlayerInfo entry : this.minecraft.getConnection().getOnlinePlayers()) {
                try {
                   UUID pid = getEntryId(entry);
                   if (pid != null) {
@@ -106,12 +106,12 @@ public class PhoneMainScreen extends Screen {
          }
       }
 
-      if (this.client != null && this.client.world != null) {
+      if (this.minecraft != null && this.minecraft.level != null) {
          try {
-            for (AbstractClientPlayerEntity p : this.client.world.getPlayers()) {
+            for (AbstractClientPlayer p : this.minecraft.level.players()) {
                try {
-                  PhoneNumberManager.registerPlayer(p.getUuid(), null);
-                  ModNetworking.requestPlayerPresence(p.getUuid());
+                  PhoneNumberManager.registerPlayer(p.getUUID(), null);
+                  ModNetworking.requestPlayerPresence(p.getUUID());
                } catch (Throwable var4) {
                }
             }
@@ -120,19 +120,19 @@ public class PhoneMainScreen extends Screen {
       }
    }
 
-   private static void toast(Text message) {
+   private static void toast(Component message) {
       try {
-         MinecraftClient client = MinecraftClient.getInstance();
+         Minecraft client = Minecraft.getInstance();
          if (client != null && client.player != null && message != null) {
-            client.player.sendMessage(message, false);
+            client.player.sendSystemMessage(message);
          }
       } catch (Throwable ignored) {
       }
    }
 
-   private void addTexturedButton(ButtonWidget button) {
+   private void addTexturedButton(Button button) {
       this.texturedButtons.add(button);
-      this.addDrawableChild(button);
+      this.addRenderableWidget(button);
    }
 
    protected void init() {
@@ -149,9 +149,9 @@ public class PhoneMainScreen extends Screen {
       this.texturedButtons.clear();
       PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
       int extraY=Math.min(this.height-23,frame.bottom()+6), extraW=(frame.width()-8)/3;
-      this.addDrawableChild(ButtonWidget.builder(Text.literal("Приватный звонок"),b->this.client.setScreen(new PrivateCallScreen())).dimensions(frame.x(),extraY,extraW,20).build()).active=!dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy();
-      this.addDrawableChild(ButtonWidget.builder(Text.literal("Организации"),b->this.client.setScreen(new OrganizationScreen())).dimensions(frame.x()+extraW+4,extraY,extraW,20).build());
-      this.addDrawableChild(ButtonWidget.builder(Text.literal("Просьбы перезвонить"),b->this.client.setScreen(new CallbackScreen())).dimensions(frame.x()+2*(extraW+4),extraY,extraW,20).build());
+      this.addRenderableWidget(Button.builder(Component.literal("Приватный звонок"),b->this.minecraft.setScreenAndShow(new PrivateCallScreen())).bounds(frame.x(),extraY,extraW,20).build()).active=!dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy();
+      this.addRenderableWidget(Button.builder(Component.literal("Организации"),b->this.minecraft.setScreenAndShow(new OrganizationScreen())).bounds(frame.x()+extraW+4,extraY,extraW,20).build());
+      this.addRenderableWidget(Button.builder(Component.literal("Просьбы перезвонить"),b->this.minecraft.setScreenAndShow(new CallbackScreen())).bounds(frame.x()+2*(extraW+4),extraY,extraW,20).build());
 
       int btnW = Math.max(14, frame.px(16));
       int btnH = Math.max(12, frame.px(13));
@@ -181,77 +181,77 @@ public class PhoneMainScreen extends Screen {
             boolean useDigit = isDigit;
             int x = startX + col * (btnW + gapX);
             int y = keypadTop + row * (btnH + gapY);
-            ButtonWidget btn = ButtonWidget.builder(Text.literal(digit), b -> {
+            Button btn = Button.builder(Component.literal(digit), b -> {
                if (useDigit) {
                   this.appendDigitInternal(digit);
                } else if ("⌫".equals(digit)) {
                   this.backspaceInternal();
                }
-            }).size(btnW, btnH).position(x, y).build();
+            }).size(btnW, btnH).pos(x, y).build();
             this.addTexturedButton(btn);
          }
       }
 
       if(!this.addToCallMode){String last=SimpleVoiceCallClient.config.lastDialedNumbers.get(dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.current());
-      var redial=ButtonWidget.builder(Text.literal("Повтор"),b->this.client.setScreen(new CallCheckScreen(last))).dimensions(startX,keypadTop+3*(btnH+gapY),btnW,btnH).build();redial.active=last!=null&&!last.isBlank();this.addTexturedButton(redial);}
+      var redial=Button.builder(Component.literal("Повтор"),b->this.minecraft.setScreenAndShow(new CallCheckScreen(last))).bounds(startX,keypadTop+3*(btnH+gapY),btnW,btnH).build();redial.active=last!=null&&!last.isBlank();this.addTexturedButton(redial);}
       int sideX = frame.x() + frame.px(110);
       int sideY = frame.y() + frame.px(31);
       int sideW = Math.max(50, frame.px(68));
       int sideH = Math.max(11, frame.px(12));
       int sideGap = Math.max(2, frame.px(2));
       int sideRow = 0;
-      ButtonWidget callBtn = ButtonWidget.builder(Text.translatable(this.addToCallMode ? "phone.add_call.dial" : "phone.screen.call"), b -> this.makeCall())
+      Button callBtn = Button.builder(Component.translatable(this.addToCallMode ? "phone.add_call.dial" : "phone.screen.call"), b -> this.makeCall())
          .size(sideW, sideH)
-         .position(sideX, sideY + sideRow++ * (sideH + sideGap))
+         .pos(sideX, sideY + sideRow++ * (sideH + sideGap))
          .build();
       this.addTexturedButton(callBtn);
       if (!this.addToCallMode) {
-         ButtonWidget historyBtn = ButtonWidget.builder(Text.translatable("phone.history.title"), b -> {
-            if (this.client != null) {
-               this.client.setScreen(new CallHistoryScreen());
+         Button historyBtn = Button.builder(Component.translatable("phone.history.title"), b -> {
+            if (this.minecraft != null) {
+               this.minecraft.setScreenAndShow(new CallHistoryScreen());
             }
-         }).size(sideW, sideH).position(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
+         }).size(sideW, sideH).pos(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
          this.addTexturedButton(historyBtn);
       }
-      ButtonWidget contactsBtn = ButtonWidget.builder(Text.translatable("phone.contacts.title"), b -> {
-         if (this.client != null) {
-            this.client.setScreen(new PhoneContactsScreen(this.addToCallMode));
+      Button contactsBtn = Button.builder(Component.translatable("phone.contacts.title"), b -> {
+         if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(new PhoneContactsScreen(this.addToCallMode));
          }
-      }).size(sideW, sideH).position(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
+      }).size(sideW, sideH).pos(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
       this.addTexturedButton(contactsBtn);
       boolean inCall = SimpleVoiceCallClient.callManager.isInCall();
-      ButtonWidget nearbyBtn = ButtonWidget.builder(Text.translatable("phone.nearby.title"), b -> {
-         if (this.client != null) {
-            this.client.setScreen(new NearbyPlayersScreen(this.addToCallMode));
+      Button nearbyBtn = Button.builder(Component.translatable("phone.nearby.title"), b -> {
+         if (this.minecraft != null) {
+            this.minecraft.setScreenAndShow(new NearbyPlayersScreen(this.addToCallMode));
          }
-      }).size(sideW, sideH).position(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
+      }).size(sideW, sideH).pos(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
       this.addTexturedButton(nearbyBtn);
       if(!inCall&&!this.addToCallMode){
-         ButtonWidget mailbox=ButtonWidget.builder(Text.literal("Голосовые"),b->{if(this.client!=null)this.client.setScreen(new VoicemailScreen(null));})
-            .size(sideW,sideH).position(sideX,sideY+sideRow++*(sideH+sideGap)).build();
+         Button mailbox=Button.builder(Component.literal("Голосовые"),b->{if(this.minecraft!=null)this.minecraft.setScreenAndShow(new VoicemailScreen(null));})
+            .size(sideW,sideH).pos(sideX,sideY+sideRow++*(sideH+sideGap)).build();
          this.addTexturedButton(mailbox);
       }
       if (inCall || this.addToCallMode) {
-         ButtonWidget currCallBtn = ButtonWidget.builder(Text.translatable(this.addToCallMode ? "phone.add_call.back_to_call" : "phone.screen.current_call"), b -> {
-            if (this.client != null) {
-               this.client.setScreen(new ActiveCallScreen());
+         Button currCallBtn = Button.builder(Component.translatable(this.addToCallMode ? "phone.add_call.back_to_call" : "phone.screen.current_call"), b -> {
+            if (this.minecraft != null) {
+               this.minecraft.setScreenAndShow(new ActiveCallScreen());
             }
-         }).size(sideW, sideH).position(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
+         }).size(sideW, sideH).pos(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
          this.addTexturedButton(currCallBtn);
       }
 
       if (!inCall && !this.addToCallMode) {
-         ButtonWidget settingsButton = ButtonWidget.builder(Text.translatable("phone.screen.settings"), b -> {
-            if (this.client != null) {
-               this.client.setScreen(new PhoneSettingsScreen());
+         Button settingsButton = Button.builder(Component.translatable("phone.screen.settings"), b -> {
+            if (this.minecraft != null) {
+               this.minecraft.setScreenAndShow(new PhoneSettingsScreen());
             }
-         }).size(sideW, sideH).position(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
+         }).size(sideW, sideH).pos(sideX, sideY + sideRow++ * (sideH + sideGap)).build();
          this.addTexturedButton(settingsButton);
       }
       if (!this.addToCallMode) {
-         ButtonWidget closeButton = ButtonWidget.builder(Text.translatable("phone.screen.close"), b -> this.close())
+         Button closeButton = Button.builder(Component.translatable("phone.screen.close"), b -> this.onClose())
             .size(sideW, sideH)
-            .position(sideX, sideY + sideRow * (sideH + sideGap))
+            .pos(sideX, sideY + sideRow * (sideH + sideGap))
             .build();
          this.addTexturedButton(closeButton);
       }
@@ -326,39 +326,39 @@ public class PhoneMainScreen extends Screen {
 
    private void makeCall() {
       if (this.currentNumber.length() == 0) {
-         toast(Text.translatable("phone.message.enter_number"));
+         toast(Component.translatable("phone.message.enter_number"));
       } else if (SimpleVoiceCallClient.callManager.isInCall() && !this.addToCallMode) {
          String otherName = SimpleVoiceCallClient.callManager.getOtherPlayerName();
          toast(
-            Text.translatable(
-               "phone.message.in_call_with", new Object[]{otherName != null ? otherName : Text.translatable("phone.message.someone")}
+            Component.translatable(
+               "phone.message.in_call_with", new Object[]{otherName != null ? otherName : Component.translatable("phone.message.someone")}
             )
          );
       } else {
-         if(dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()&&PhoneNumberManager.isValidShortCode(this.currentNumber.toString())){toast(Text.translatable("phone.standard.short_fox"));return;}
-         if(!this.addToCallMode){this.client.setScreen(new CallCheckScreen(this.currentNumber.toString()));return;}
+         if(dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()&&PhoneNumberManager.isValidShortCode(this.currentNumber.toString())){toast(Component.translatable("phone.standard.short_fox"));return;}
+         if(!this.addToCallMode){this.minecraft.setScreenAndShow(new CallCheckScreen(this.currentNumber.toString()));return;}
          this.registerAllPlayers();
          String dialed=this.currentNumber.toString();
          dev.yukiinotenshi.simplephonepromax.phone.PhoneDialer.resolve(dialed).thenAccept(resolved -> {
-            MinecraftClient client=MinecraftClient.getInstance();
+            Minecraft client=Minecraft.getInstance();
             if(client==null)return;
             client.execute(()->{
-               if(client.currentScreen!=this||client.player==null||!dialed.equals(this.currentNumber.toString()))return;
-               if(resolved==null){if(dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.queued()){toast(Text.literal(dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.status()));return;}dev.yukiinotenshi.simplephonepromax.sound.OperatorSounds.unavailable();toast(Text.translatable("phone.message.subscriber_not_found",PhoneNumberManager.formatNumber(dialed)));return;}
+               if(!dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.isCurrent(this)||client.player==null||!dialed.equals(this.currentNumber.toString()))return;
+               if(resolved==null){if(dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.queued()){toast(Component.literal(dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.status()));return;}dev.yukiinotenshi.simplephonepromax.sound.OperatorSounds.unavailable();toast(Component.translatable("phone.message.subscriber_not_found",PhoneNumberManager.formatNumber(dialed)));return;}
                this.startResolvedCall(resolved,PhoneNumberManager.formatNumber(dialed),PhoneNumberManager.onlyDigits(dialed));
             });
-         }).exceptionally(error->{MinecraftClient.getInstance().execute(()->{dev.yukiinotenshi.simplephonepromax.sound.OperatorSounds.unavailable();toast(Text.literal("Не удалось проверить номер у оператора"));});return null;});
+         }).exceptionally(error->{Minecraft.getInstance().execute(()->{dev.yukiinotenshi.simplephonepromax.sound.OperatorSounds.unavailable();toast(Component.literal("Не удалось проверить номер у оператора"));});return null;});
       }
    }
 
    private void startResolvedCall(UUID targetUuid, String targetName, String targetNumberRaw) {
-      if (targetUuid == null || this.client == null || this.client.player == null) {
+      if (targetUuid == null || this.minecraft == null || this.minecraft.player == null) {
          return;
       }
       // A resolved phone number is sufficient for an ordinary legacy call.
       // Contacts/met-player bookkeeping is not a capability or permission check.
-      if (this.client.getNetworkHandler() != null) {
-         for (PlayerListEntry entry : this.client.getNetworkHandler().getPlayerList()) {
+      if (this.minecraft.getConnection() != null) {
+         for (PlayerInfo entry : this.minecraft.getConnection().getOnlinePlayers()) {
             if (targetUuid.equals(getEntryId(entry))) {
                String onlineName = getEntryName(entry);
                if (onlineName != null) targetName = onlineName;
@@ -369,25 +369,25 @@ public class PhoneMainScreen extends Screen {
 
       if (this.addToCallMode) {
          if (!SimpleVoiceCallClient.callManager.isInActiveCall()) {
-            toast(Text.translatable("phone.add_call.no_active_call"));
-            if (this.client != null) {
-               this.client.setScreen(new PhoneMainScreen());
+            toast(Component.translatable("phone.add_call.no_active_call"));
+            if (this.minecraft != null) {
+               this.minecraft.setScreenAndShow(new PhoneMainScreen());
             }
             return;
          }
 
          if (ModNetworking.isPlayerInActiveCallGroup(targetUuid)) {
-            toast(Text.translatable("phone.add_call.already_here", targetName));
-            if (this.client != null) {
-               this.client.setScreen(new ActiveCallScreen());
+            toast(Component.translatable("phone.add_call.already_here", targetName));
+            if (this.minecraft != null) {
+               this.minecraft.setScreenAndShow(new ActiveCallScreen());
             }
          } else if (ModNetworking.inviteToActiveCall(targetUuid, targetName)) {
-            toast(Text.translatable("phone.add_call.invite_sent", targetName));
-            if (this.client != null) {
-               this.client.setScreen(new ActiveCallScreen());
+            toast(Component.translatable("phone.add_call.invite_sent", targetName));
+            if (this.minecraft != null) {
+               this.minecraft.setScreenAndShow(new ActiveCallScreen());
             }
          } else {
-            toast(Text.translatable("phone.add_call.unavailable", targetName));
+            toast(Component.translatable("phone.add_call.unavailable", targetName));
          }
          return;
       }
@@ -396,12 +396,12 @@ public class PhoneMainScreen extends Screen {
          dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()?"Legacy":"Fox Mobile");
       boolean started = dev.yukiinotenshi.simplephonepromax.phone.PhoneDialer.call(targetUuid, targetName, targetNumberRaw);
 
-      if ((started || SimpleVoiceCallClient.callManager.getState() == CallState.BUSY) && this.client != null) {
-         this.client.setScreen(new ActiveCallScreen());
+      if ((started || SimpleVoiceCallClient.callManager.getState() == CallState.BUSY) && this.minecraft != null) {
+         this.minecraft.setScreenAndShow(new ActiveCallScreen());
       }
    }
 
-   public void render(DrawContext drawContext, int mouseX, int mouseY, float partialTick) {
+   public void extractRenderState(GuiGraphicsExtractor drawContext, int mouseX, int mouseY, float partialTick) {
       try {
          WallpaperEngine.render(drawContext, this.width, this.height);
       } catch (Throwable var28) {
@@ -410,7 +410,7 @@ public class PhoneMainScreen extends Screen {
       try {
          PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
          int centerX = frame.centerX();
-         Text title = Text.translatable(this.addToCallMode ? "phone.add_call.title" : "phone.screen.phone");
+         Component title = Component.translatable(this.addToCallMode ? "phone.add_call.title" : "phone.screen.phone");
 
          try {
             PhoneGuiTextures.drawPhone(drawContext, frame, mouseX, mouseY);
@@ -418,7 +418,7 @@ public class PhoneMainScreen extends Screen {
          }
 
          try {
-            PhoneGuiTextures.drawCenteredTrimmedText(drawContext, this.textRenderer, title, centerX, frame.y() + frame.px(8), frame.contentWidth(), 16777215);
+            PhoneGuiTextures.drawCenteredTrimmedText(drawContext, this.font, title, centerX, frame.y() + frame.px(8), frame.contentWidth(), 16777215);
          } catch (Throwable var25) {
          }
 
@@ -427,26 +427,26 @@ public class PhoneMainScreen extends Screen {
             int displayH = frame.displayHeight();
             int displayX = frame.displayX();
             int displayY = frame.displayY();
-            Text dText;
+            Component dText;
             int displayColor;
             if (this.currentNumber.length() == 0) {
-               dText = Text.literal("+");
+               dText = Component.literal("+");
                displayColor = -11154347;
             } else {
-               dText = Text.literal(PhoneNumberManager.formatNumber(this.currentNumber.toString()));
+               dText = Component.literal(PhoneNumberManager.formatNumber(this.currentNumber.toString()));
                displayColor = -16711834;
             }
 
-            String visibleNumber = this.textRenderer.trimToWidth(dText.getString(), Math.max(4, displayW - 4));
-            int baseW = this.textRenderer.getWidth(visibleNumber);
+            String visibleNumber = this.font.plainSubstrByWidth(dText.getString(), Math.max(4, displayW - 4));
+            int baseW = this.font.width(visibleNumber);
             int ty = displayY + (displayH - 8) / 2;
             int tx = displayX + displayW - baseW - Math.max(2, frame.px(2));
 
             try {
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, visibleNumber, tx, ty, displayColor, false);
+               PhoneGuiTextures.drawText(drawContext, this.font, visibleNumber, tx, ty, displayColor, false);
             } catch (Throwable t) {
                try {
-                  PhoneGuiTextures.drawText(drawContext, this.textRenderer, visibleNumber, tx, ty, displayColor, false);
+                  PhoneGuiTextures.drawText(drawContext, this.font, visibleNumber, tx, ty, displayColor, false);
                } catch (Throwable var20) {
                }
             }
@@ -454,35 +454,35 @@ public class PhoneMainScreen extends Screen {
             Throwable t = var23;
 
             try {
-               Text tmsg = Text.translatable("phone.error.render_details");
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, tmsg.getString(), 20, 80, -39322, true);
-               Text tmsg2 = Text.translatable(
+               Component tmsg = Component.translatable("phone.error.render_details");
+               PhoneGuiTextures.drawText(drawContext, this.font, tmsg.getString(), 20, 80, -39322, true);
+               Component tmsg2 = Component.translatable(
                   "phone.error.details",
                   new Object[]{t.getClass().getSimpleName(), t.getMessage() != null ? t.getMessage().substring(0, Math.min(80, t.getMessage().length())) : ""}
                );
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, tmsg2.getString(), 20, 100, 16777215, true);
+               PhoneGuiTextures.drawText(drawContext, this.font, tmsg2.getString(), 20, 100, 16777215, true);
             } catch (Throwable var19) {
             }
          }
 
          try {
             String legacy=PhoneNumberManager.getMyNumber();
-            String backend=this.client.player==null?null:dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.getNumberFor(this.client.player.getUuid());
+            String backend=this.minecraft.player==null?null:dev.yukiinotenshi.simplephonepromax.phone.BackendNumberService.getNumberFor(this.minecraft.player.getUUID());
             // Keep the number labels below the keypad, inside its left column.
             int numberCenter=frame.x()+frame.px(62),numberWidth=frame.px(88);
-            PhoneGuiTextures.drawCenteredTrimmedText(drawContext,this.textRenderer,Text.literal("Legacy: "+PhoneNumberManager.formatNumber(legacy)),numberCenter,frame.y()+frame.px(115),numberWidth,0xFF88FF88);
-            PhoneGuiTextures.drawCenteredTrimmedText(drawContext,this.textRenderer,Text.literal("Оператор: "+(backend==null||backend.isBlank()?"не получен":PhoneNumberManager.formatNumber(backend))),numberCenter,frame.y()+frame.px(124),numberWidth,0xFF88FF88);
+            PhoneGuiTextures.drawCenteredTrimmedText(drawContext,this.font,Component.literal("Legacy: "+PhoneNumberManager.formatNumber(legacy)),numberCenter,frame.y()+frame.px(115),numberWidth,0xFF88FF88);
+            PhoneGuiTextures.drawCenteredTrimmedText(drawContext,this.font,Component.literal("Оператор: "+(backend==null||backend.isBlank()?"не получен":PhoneNumberManager.formatNumber(backend))),numberCenter,frame.y()+frame.px(124),numberWidth,0xFF88FF88);
          } catch (Throwable var24) {
          }
 
          try {
-            super.render(drawContext,mouseX,mouseY,partialTick);PhoneGuiTextures.widgets(this,drawContext,mouseX,mouseY);
+            super.extractRenderState(drawContext,mouseX,mouseY,partialTick);PhoneGuiTextures.widgets(this,drawContext,mouseX,mouseY);
          } catch (Throwable var29) {
          }
 
          try {
-            for (ButtonWidget button : this.texturedButtons) {
-               PhoneGuiTextures.drawButton(drawContext, this.textRenderer, button, mouseX, mouseY);
+            for (Button button : this.texturedButtons) {
+               PhoneGuiTextures.drawButton(drawContext, this.font, button, mouseX, mouseY);
             }
          } catch (Throwable ignored) {
          }
@@ -491,25 +491,25 @@ public class PhoneMainScreen extends Screen {
 
          try {
             drawContext.fill(0, 0, this.width, this.height, -16777216);
-            Text terr = Text.translatable("phone.error.critical_render");
-            PhoneGuiTextures.drawText(drawContext, this.textRenderer, terr.getString(), 20, 80, -65536, true);
-            Text terr2 = Text.translatable("phone.error.cause", new Object[]{tt.getClass().getSimpleName()});
-            PhoneGuiTextures.drawText(drawContext, this.textRenderer, terr2.getString(), 20, 100, 16777215, true);
+            Component terr = Component.translatable("phone.error.critical_render");
+            PhoneGuiTextures.drawText(drawContext, this.font, terr.getString(), 20, 80, -65536, true);
+            Component terr2 = Component.translatable("phone.error.cause", new Object[]{tt.getClass().getSimpleName()});
+            PhoneGuiTextures.drawText(drawContext, this.font, terr2.getString(), 20, 100, 16777215, true);
          } catch (Throwable var18) {
          }
       }
    }
 
-   public boolean shouldPause() {
+   public boolean isPauseScreen() {
       return false;
    }
 
-   public void close() {
-      if (this.addToCallMode && this.client != null && SimpleVoiceCallClient.callManager.isInActiveCall()) {
-         this.client.setScreen(new ActiveCallScreen());
+   public void onClose() {
+      if (this.addToCallMode && this.minecraft != null && SimpleVoiceCallClient.callManager.isInActiveCall()) {
+         this.minecraft.setScreenAndShow(new ActiveCallScreen());
       } else {
          PhoneClientActions.putAwayPhone();
-         super.close();
+         super.onClose();
       }
    }
 }

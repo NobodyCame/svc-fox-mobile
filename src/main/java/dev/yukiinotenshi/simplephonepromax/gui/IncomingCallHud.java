@@ -3,21 +3,21 @@ package dev.yukiinotenshi.simplephonepromax.gui;
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import dev.yukiinotenshi.simplephonepromax.call.CallState;
 import dev.yukiinotenshi.simplephonepromax.phone.PhoneDetector;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public final class IncomingCallHud {
    private IncomingCallHud() {
    }
 
-   public static void render(DrawContext context) {
+   public static void render(GuiGraphicsExtractor context) {
       try {
          PhoneNotification.render(context);
          var offer = dev.yukiinotenshi.simplephonepromax.network.CallControlService.incoming();
          if (offer != null) {
-            MinecraftClient c = MinecraftClient.getInstance();
+            Minecraft c = Minecraft.getInstance();
             if (c.player != null && PhoneDetector.hasPhone(c)) {
-               PhoneGuiTextures.drawIncomingToast(context, c.textRenderer, offer.sourceName(), dev.yukiinotenshi.simplephonepromax.network.CallControlService.incomingAt());
+               PhoneGuiTextures.drawIncomingToast(context, c.font, offer.sourceName(), dev.yukiinotenshi.simplephonepromax.network.CallControlService.incomingAt());
             }
             return;
          }
@@ -25,8 +25,8 @@ public final class IncomingCallHud {
             return;
          }
 
-         MinecraftClient client = MinecraftClient.getInstance();
-         if (client == null || client.textRenderer == null) {
+         Minecraft client = Minecraft.getInstance();
+         if (client == null || client.font == null) {
             return;
          }
 
@@ -36,7 +36,7 @@ public final class IncomingCallHud {
 
          PhoneGuiTextures.drawIncomingToast(
             context,
-            client.textRenderer,
+            client.font,
             SimpleVoiceCallClient.callManager.getOtherPlayerName(),
             SimpleVoiceCallClient.callManager.getRingingStartedAtMs()
          );

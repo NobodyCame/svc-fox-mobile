@@ -37,7 +37,9 @@ import dev.yukiinotenshi.simplephonepromax.sound.SoundManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.EndTick;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +77,8 @@ public class SimpleVoiceCallClient implements ClientModInitializer {
          dev.yukiinotenshi.simplephonepromax.network.PrivateCalls.tick();
          dev.yukiinotenshi.simplephonepromax.sound.OperatorSounds.tick();
       });
-      HudRenderCallback.EVENT.register((drawContext, tickCounter) -> IncomingCallHud.render(drawContext));
+      HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath(MOD_ID, "incoming_call"),
+         (graphics, tickCounter) -> IncomingCallHud.render(graphics));
       LOGGER.info("Fox Mobile initialized successfully");
    }
 }

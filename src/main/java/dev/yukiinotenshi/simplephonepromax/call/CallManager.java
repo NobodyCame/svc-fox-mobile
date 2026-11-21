@@ -10,8 +10,7 @@ import dev.yukiinotenshi.simplephonepromax.network.VoiceCallTransport;
 import dev.yukiinotenshi.simplephonepromax.phone.PhoneClientActions;
 import dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager;
 import java.util.UUID;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
 
 public class CallManager {
    private static final long OUTGOING_COOLDOWN_MS = 3000L;
@@ -45,9 +44,9 @@ public class CallManager {
 
    private static void closeCallScreen() {
       try {
-         MinecraftClient c = MinecraftClient.getInstance();
-         if (c != null && (c.currentScreen instanceof ActiveCallScreen || c.currentScreen instanceof IncomingCallScreen)) {
-            c.setScreen(null);
+         Minecraft c = Minecraft.getInstance();
+         if (c != null && (dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen || dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof IncomingCallScreen)) {
+            c.setScreenAndShow(null);
          }
       } catch (Throwable var1) {
       }
@@ -61,9 +60,9 @@ public class CallManager {
          UUID me = null;
 
          try {
-            MinecraftClient c = MinecraftClient.getInstance();
+            Minecraft c = Minecraft.getInstance();
             if (c != null && c.player != null) {
-               me = c.player.getUuid();
+               me = c.player.getUUID();
             }
          } catch (Throwable var12) {
          }
@@ -94,9 +93,9 @@ public class CallManager {
          UUID me = null;
 
          try {
-            MinecraftClient c = MinecraftClient.getInstance();
+            Minecraft c = Minecraft.getInstance();
             if (c != null && c.player != null) {
-               me = c.player.getUuid();
+               me = c.player.getUUID();
             }
          } catch (Throwable var9) {
          }
@@ -472,7 +471,7 @@ public class CallManager {
 
    private static void sendMsg(String m) {
       try {
-         MinecraftClient c = MinecraftClient.getInstance();
+         Minecraft c = Minecraft.getInstance();
          if (c != null && c.player != null && m != null && !m.isBlank()) {
             dev.yukiinotenshi.simplephonepromax.phone.PhoneMessages.show(m);
          }

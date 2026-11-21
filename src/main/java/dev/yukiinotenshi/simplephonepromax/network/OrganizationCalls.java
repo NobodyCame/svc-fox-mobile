@@ -6,7 +6,7 @@ import dev.yukiinotenshi.simplephonepromax.phone.PhoneDialer;
 import java.util.UUID;
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public final class OrganizationCalls {
     private static boolean queued, busy;
@@ -30,7 +30,7 @@ public final class OrganizationCalls {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         long epoch = generation;
         CallControlService.extension("org-join", body).whenComplete((value, error) ->
-                MinecraftClient.getInstance().execute(() -> {
+                Minecraft.getInstance().execute(() -> {
                     if (epoch != generation) { result.complete(true); return; }
                     if (error != null) { result.completeExceptionally(error); return; }
                     boolean handled = value.has("handled") && value.get("handled").getAsBoolean();
@@ -62,7 +62,7 @@ public final class OrganizationCalls {
                 currentTarget = null;
                 number = "";
                 generation++;
-                if (MinecraftClient.getInstance().player != null && CallControlService.available())
+                if (Minecraft.getInstance().player != null && CallControlService.available())
                     CallControlService.extension("org-cancel", new JsonObject());
                 return;
             }
@@ -71,14 +71,14 @@ public final class OrganizationCalls {
                     currentTarget.equals(SimpleVoiceCallClient.callManager.getOtherPlayerUuid())) {
                 UUID previous = currentTarget;
                 SimpleVoiceCallClient.callManager.endCall();
-                var client = MinecraftClient.getInstance();
-                if (client.player != null) ModNetworking.sendCallHangup(client.player.getUuid(), previous);
+                var client = Minecraft.getInstance();
+                if (client.player != null) ModNetworking.sendCallHangup(client.player.getUUID(), previous);
             }
             currentTarget = target;
             String name = value.get("name").getAsString();
             if (PhoneDialer.call(target, name)) {
                 status = "Соединяем с оператором";
-                MinecraftClient.getInstance().setScreen(new dev.yukiinotenshi.simplephonepromax.gui.ActiveCallScreen());
+                Minecraft.getInstance().setScreenAndShow(new dev.yukiinotenshi.simplephonepromax.gui.ActiveCallScreen());
             } else {
                 status = "Вызываем оператора · если он не ответит, вызов перейдёт дальше";
             }
@@ -88,8 +88,8 @@ public final class OrganizationCalls {
                     SimpleVoiceCallClient.callManager.getOtherPlayerUuid())) {
                 UUID previous = currentTarget;
                 SimpleVoiceCallClient.callManager.endCall();
-                var client = MinecraftClient.getInstance();
-                if (client.player != null) ModNetworking.sendCallHangup(client.player.getUuid(), previous);
+                var client = Minecraft.getInstance();
+                if (client.player != null) ModNetworking.sendCallHangup(client.player.getUUID(), previous);
             }
             currentTarget = null;
         }
@@ -98,7 +98,7 @@ public final class OrganizationCalls {
     public static void tick() {
         if (!queued) return;
         long now = System.currentTimeMillis();
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         var callState = SimpleVoiceCallClient.callManager.getState();
         UUID other = SimpleVoiceCallClient.callManager.getOtherPlayerUuid();
         boolean ourCall = currentTarget != null && currentTarget.equals(other) &&
@@ -132,7 +132,7 @@ public final class OrganizationCalls {
         generation++;
         number = "";
         currentTarget = null;
-        if (MinecraftClient.getInstance().player != null && CallControlService.available()) {
+        if (Minecraft.getInstance().player != null && CallControlService.available()) {
             CallControlService.extension("org-cancel", new JsonObject());
         }
     }
@@ -171,7 +171,7 @@ public final class OrganizationCalls {
         body.addProperty("number", lineNumber);
         body.addProperty("on_shift", onShift);
         CallControlService.extension("org-shift", body).whenComplete((value, error) ->
-                MinecraftClient.getInstance().execute(() -> {
+                Minecraft.getInstance().execute(() -> {
                     shiftRequestPending = false;
                     boolean success = error == null && value.has("on_shift") && value.get("on_shift").getAsBoolean() == onShift;
                     result.accept(success, success ? "" : error == null ? "Сервер не подтвердил изменение смены" : errorMessage(error));

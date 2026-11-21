@@ -7,23 +7,23 @@ import dev.yukiinotenshi.simplephonepromax.sound.WallpaperEngine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.text.Text;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class IncomingCallScreen extends Screen {
    private long lastBlinkTime = System.currentTimeMillis();
    private boolean blinkVisible = true;
-   private final List<ButtonWidget> texturedButtons = new ArrayList<>();
+   private final List<Button> texturedButtons = new ArrayList<>();
 
    public IncomingCallScreen() {
-      super(Text.translatable("phone.incoming.title"));
+      super(Component.translatable("phone.incoming.title"));
    }
 
-   private void addTexturedButton(ButtonWidget button) {
+   private void addTexturedButton(Button button) {
       this.texturedButtons.add(button);
-      this.addDrawableChild(button);
+      this.addRenderableWidget(button);
    }
 
    protected void init() {
@@ -39,30 +39,30 @@ public class IncomingCallScreen extends Screen {
       int buttonHeight = Math.max(11, frame.px(12));
       int buttonY = frame.y() + frame.px(62);
       int buttonX = frame.x() + frame.px(110);
-      ButtonWidget acceptButton = ButtonWidget.builder(Text.translatable("phone.incoming.answer"), b -> {
+      Button acceptButton = Button.builder(Component.translatable("phone.incoming.answer"), b -> {
          UUID otherUuid = SimpleVoiceCallClient.callManager.getOtherPlayerUuid();
          UUID playerUuid = null;
-         if (this.client != null && this.client.player != null) {
-            playerUuid = this.client.player.getUuid();
+         if (this.minecraft != null && this.minecraft.player != null) {
+            playerUuid = this.minecraft.player.getUUID();
          }
 
          if (otherUuid != null && playerUuid != null) {
             ModNetworking.sendCallAccept(playerUuid, otherUuid);
          }
-      }).size(buttonWidth, buttonHeight).position(buttonX, buttonY).build();
+      }).size(buttonWidth, buttonHeight).pos(buttonX, buttonY).build();
       this.addTexturedButton(acceptButton);
-      ButtonWidget declineButton = ButtonWidget.builder(Text.translatable("phone.incoming.decline"), b -> {
+      Button declineButton = Button.builder(Component.translatable("phone.incoming.decline"), b -> {
          UUID otherUuid = SimpleVoiceCallClient.callManager.getOtherPlayerUuid();
-         UUID playerUuid = this.client != null && this.client.player != null ? this.client.player.getUuid() : null;
+         UUID playerUuid = this.minecraft != null && this.minecraft.player != null ? this.minecraft.player.getUUID() : null;
          if (otherUuid != null && playerUuid != null) {
             ModNetworking.sendCallDecline(playerUuid, otherUuid);
          }
 
          SimpleVoiceCallClient.callManager.declineCall();
-         this.close();
-      }).size(buttonWidth, buttonHeight).position(buttonX, buttonY + buttonHeight + gap).build();
+         this.onClose();
+      }).size(buttonWidth, buttonHeight).pos(buttonX, buttonY + buttonHeight + gap).build();
       this.addTexturedButton(declineButton);
-      ButtonWidget blockButton = ButtonWidget.builder(Text.translatable("phone.call.block"), b -> {
+      Button blockButton = Button.builder(Component.translatable("phone.call.block"), b -> {
          UUID otherUuid = SimpleVoiceCallClient.callManager.getOtherPlayerUuid();
          String otherName = SimpleVoiceCallClient.callManager.getOtherPlayerName();
          if (otherUuid != null) {
@@ -73,12 +73,12 @@ public class IncomingCallScreen extends Screen {
          }
 
          SimpleVoiceCallClient.callManager.declineCall();
-         this.close();
-      }).size(buttonWidth, buttonHeight).position(buttonX, buttonY + 2 * (buttonHeight + gap)).build();
+         this.onClose();
+      }).size(buttonWidth, buttonHeight).pos(buttonX, buttonY + 2 * (buttonHeight + gap)).build();
       this.addTexturedButton(blockButton);
    }
 
-   public void render(DrawContext drawContext, int mouseX, int mouseY, float partialTick) {
+   public void extractRenderState(GuiGraphicsExtractor drawContext, int mouseX, int mouseY, float partialTick) {
       try {
          long now = System.currentTimeMillis();
          if (now - this.lastBlinkTime >= 500L) {
@@ -99,11 +99,11 @@ public class IncomingCallScreen extends Screen {
          }
 
          if (this.blinkVisible) {
-            Text callTitle = Text.translatable("phone.incoming.title");
+            Component callTitle = Component.translatable("phone.incoming.title");
 
             try {
                PhoneGuiTextures.drawCenteredTrimmedText(
-                  drawContext, this.textRenderer, callTitle, centerX, frame.y() + frame.px(12), frame.px(170), 16776960
+                  drawContext, this.font, callTitle, centerX, frame.y() + frame.px(12), frame.px(170), 16776960
                );
             } catch (Throwable var18) {
             }
@@ -111,41 +111,41 @@ public class IncomingCallScreen extends Screen {
 
          String callerName = SimpleVoiceCallClient.callManager.getOtherPlayerName();
          if (callerName != null) {
-            Text nameComponent = Text.literal(callerName);
-            String trimmedName = this.textRenderer.trimToWidth(nameComponent.getString(), frame.px(92));
+            Component nameComponent = Component.literal(callerName);
+            String trimmedName = this.font.plainSubstrByWidth(nameComponent.getString(), frame.px(92));
             int nameY = frame.y() + frame.px(38);
-            int nameX = centerX - this.textRenderer.getWidth(trimmedName) / 2;
+            int nameX = centerX - this.font.width(trimmedName) / 2;
 
             try {
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, trimmedName, nameX + 1, nameY, 0xFF000000, false);
+               PhoneGuiTextures.drawText(drawContext, this.font, trimmedName, nameX + 1, nameY, 0xFF000000, false);
             } catch (Throwable var17) {
             }
 
             try {
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, trimmedName, nameX - 1, nameY, 0xFF000000, false);
+               PhoneGuiTextures.drawText(drawContext, this.font, trimmedName, nameX - 1, nameY, 0xFF000000, false);
             } catch (Throwable var16) {
             }
 
             try {
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, trimmedName, nameX, nameY + 1, 0xFF000000, false);
+               PhoneGuiTextures.drawText(drawContext, this.font, trimmedName, nameX, nameY + 1, 0xFF000000, false);
             } catch (Throwable var15) {
             }
 
             try {
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, trimmedName, nameX, nameY - 1, 0xFF000000, false);
+               PhoneGuiTextures.drawText(drawContext, this.font, trimmedName, nameX, nameY - 1, 0xFF000000, false);
             } catch (Throwable var14) {
             }
 
             try {
-               PhoneGuiTextures.drawText(drawContext, this.textRenderer, trimmedName, nameX, nameY, 0xFFFF5555, false);
+               PhoneGuiTextures.drawText(drawContext, this.font, trimmedName, nameX, nameY, 0xFFFF5555, false);
             } catch (Throwable var13) {
             }
          }
 
-         super.render(drawContext,mouseX,mouseY,partialTick);PhoneGuiTextures.widgets(this,drawContext,mouseX,mouseY);
+         super.extractRenderState(drawContext,mouseX,mouseY,partialTick);PhoneGuiTextures.widgets(this,drawContext,mouseX,mouseY);
          try {
-            for (ButtonWidget button : this.texturedButtons) {
-               PhoneGuiTextures.drawButton(drawContext, this.textRenderer, button, mouseX, mouseY);
+            for (Button button : this.texturedButtons) {
+               PhoneGuiTextures.drawButton(drawContext, this.font, button, mouseX, mouseY);
             }
          } catch (Throwable ignored) {
          }
@@ -157,13 +157,13 @@ public class IncomingCallScreen extends Screen {
       return false;
    }
 
-   public boolean shouldPause() {
+   public boolean isPauseScreen() {
       return false;
    }
 
-   public void close() {
+   public void onClose() {
       PhoneClientActions.putAwayPhone();
-      super.close();
+      super.onClose();
    }
 }
 
