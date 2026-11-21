@@ -5,8 +5,8 @@ import dev.yukiinotenshi.simplephonepromax.*;
 import dev.yukiinotenshi.simplephonepromax.phone.*;
 import dev.yukiinotenshi.simplephonepromax.gui.*;
 import dev.yukiinotenshi.simplephonepromax.compat.CallStandard;
-import net.minecraft.client.MinecraftClient;
 import java.util.*;
+import net.minecraft.client.Minecraft;
 
 /** Password rendezvous only; microphone and audio remain in SVC. */
 public final class PrivateCalls {
@@ -17,7 +17,7 @@ private static long generation,lastSeen,started,connectedAt,missingSince,orphanU
  private static int joinAttempts;
  private static String context="",status="Выберите контакт",orphanName="";
  private static UUID pendingTarget;
- private static MinecraftClient client(){return MinecraftClient.getInstance();}
+ private static Minecraft client(){return Minecraft.getInstance();}
  private static String str(JsonObject o,String k){return o.has(k)&&!o.get(k).isJsonNull()?o.get(k).getAsString():"";}
  public static boolean hasSession(){return session!=null;}
  public static boolean busy(){return creating||session!=null;}
@@ -25,17 +25,17 @@ private static long generation,lastSeen,started,connectedAt,missingSince,orphanU
  public static boolean connected(){return connected;}
  public static boolean outgoingRinging(){return creating||session!=null&&source()&&str(session,"status").equals("pending");}
  public static String status(){return status;}
- public static String peerName(){UUID id=session==null?pendingTarget:UUID.fromString(str(session,source()?"target":"source"));if(id==null)return "";var entry=client().getNetworkHandler()==null?null:client().getNetworkHandler().getPlayerListEntry(id);if(entry!=null)return entry.getProfile().name();for(var contact:SimpleVoiceCallClient.config.contacts)if(id.toString().equals(contact.uuid))return contact.name;return "Абонент";}
- private static boolean source(){return session!=null&&client().player!=null&&str(session,"source").equals(client().player.getUuid().toString());}
+ public static String peerName(){UUID id=session==null?pendingTarget:UUID.fromString(str(session,source()?"target":"source"));if(id==null)return "";var entry=client().getConnection()==null?null:client().getConnection().getPlayerInfo(id);if(entry!=null)return entry.getProfile().name();for(var contact:SimpleVoiceCallClient.config.contacts)if(id.toString().equals(contact.uuid))return contact.name;return "Абонент";}
+ private static boolean source(){return session!=null&&client().player!=null&&str(session,"source").equals(client().player.getUUID().toString());}
  private static boolean canStart(){return !CallStandard.isLegacy()&&CallControlService.available()&&VoicechatPluginImpl.isReady()&&client().player!=null&&PhoneDetector.hasPhone(client())&&!SimpleVoiceCallClient.callManager.isInCall()&&VoicechatPluginImpl.getOwnGroupId()==null&&!CallControlService.hasHeld()&&!OrganizationCalls.queued()&&!dev.yukiinotenshi.simplephonepromax.gui.DialAttemptScreen.active()&&CallControlService.incoming()==null;}
  private static JsonObject body(){var b=new JsonObject();b.addProperty("id",str(session,"id"));return b;}
  public static void call(UUID target){
-  if(target==null||client().player==null||busy()||!canStart()||!CallPolicy.cooldown(client().player.getUuid(),"private")||!CallControlService.supports(target,"private_call_v1")){PhoneMessages.show("Приватный звонок недоступен");return;}
-  creating=true;joining=false;joinAttempts=0;acceptedAt=joiningAt=0;pendingTarget=target;status="Вызов…";context=ServerProfiles.current();long epoch=++generation;started=System.currentTimeMillis();client().setScreen(new PrivateCallScreen());
+  if(target==null||client().player==null||busy()||!canStart()||!CallPolicy.cooldown(client().player.getUUID(),"private")||!CallControlService.supports(target,"private_call_v1")){PhoneMessages.show("Приватный звонок недоступен");return;}
+  creating=true;joining=false;joinAttempts=0;acceptedAt=joiningAt=0;pendingTarget=target;status="Вызов…";context=ServerProfiles.current();long epoch=++generation;started=System.currentTimeMillis();client().setScreenAndShow(new PrivateCallScreen());
   var b=new JsonObject();b.addProperty("target",target.toString());
   CallControlService.extensionWithSnapshot("private-offer",b).whenComplete((v,e)->client().execute(()->{
    if(epoch!=generation){if(v!=null){var end=new JsonObject();end.addProperty("id",str(v,"id"));CallControlService.extension("private-end",end);}return;}
-   creating=false;if(e!=null){status="Абонент недоступен или занят";pendingTarget=null;PhoneMessages.show(status);return;}pendingTarget=null;apply(v);client().setScreen(new PrivateCallScreen());
+   creating=false;if(e!=null){status="Абонент недоступен или занят";pendingTarget=null;PhoneMessages.show(status);return;}pendingTarget=null;apply(v);client().setScreenAndShow(new PrivateCallScreen());
   }));
  }
  public static void poll(JsonArray list){

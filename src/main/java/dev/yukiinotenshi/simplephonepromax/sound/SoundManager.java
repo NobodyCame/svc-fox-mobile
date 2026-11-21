@@ -8,15 +8,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.sound.sampled.Clip;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry.Reference;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 
 public class SoundManager {
-   private final MinecraftClient client = MinecraftClient.getInstance();
+   private final Minecraft client = Minecraft.getInstance();
    private int ringtoneTickCounter = 0;
    private boolean ringtonePlaying = false;
    private boolean ringtoneLoop = false;
@@ -24,7 +24,7 @@ public class SoundManager {
    private long lastRingtoneAt = 0L;
    private boolean busyBeep = false;
    private long lastBusyBeepAt = 0L;
-   private PositionedSoundInstance builtinPlaying;
+   private SimpleSoundInstance builtinPlaying;
    private Clip customClip;
    private String selectedRingtone;
    private float selectedVolume;
@@ -118,7 +118,7 @@ public class SoundManager {
    public void tick() {
       if (this.ringtonePlaying) {
          this.ringtoneTickCounter++;
-         boolean customClipActive = this.decoding || (this.builtinPlaying!=null&&this.client.getSoundManager().isPlaying(this.builtinPlaying));
+         boolean customClipActive = this.decoding || (this.builtinPlaying!=null&&this.client.getSoundManager().isActive(this.builtinPlaying));
          if (this.customClip != null) {
             customClipActive = this.ringtoneLoop || this.customClip.isRunning();
             if (!customClipActive) {
@@ -156,9 +156,9 @@ public class SoundManager {
             try {
                SoundEvent beep = pickBusyBeep();
                if (beep != null) {
-                  MinecraftClient cl = MinecraftClient.getInstance();
+                  Minecraft cl = Minecraft.getInstance();
                   if (cl != null && cl.player != null) {
-                     PositionedSoundInstance inst = PositionedSoundInstance.ui(beep, 1.0F, 0.7F);
+                     SimpleSoundInstance inst = SimpleSoundInstance.forUI(beep, 1.0F, 0.7F);
                      this.builtinPlaying=inst;cl.getSoundManager().play(inst);
                   }
                }
@@ -174,7 +174,7 @@ public class SoundManager {
 
    private void playOneShotNow() {
       try {
-         MinecraftClient cl = MinecraftClient.getInstance();
+         Minecraft cl = Minecraft.getInstance();
          if (cl == null || cl.player == null) {
             return;
          }
@@ -197,15 +197,15 @@ public class SoundManager {
             return;
          }
 
-         Reference<SoundEvent> ref = (Reference<SoundEvent>)Registries.SOUND_EVENT.getEntry(Registries.SOUND_EVENT.getId(se)).orElse(null);
+         Reference<SoundEvent> ref = (Reference<SoundEvent>)BuiltInRegistries.SOUND_EVENT.get(BuiltInRegistries.SOUND_EVENT.getKey(se)).orElse(null);
          if (ref == null) {
             try {
-               PositionedSoundInstance inst = PositionedSoundInstance.ui(se, 1.0F, this.selectedVolume);
+               SimpleSoundInstance inst = SimpleSoundInstance.forUI(se, 1.0F, this.selectedVolume);
                this.builtinPlaying=inst;cl.getSoundManager().play(inst);
             } catch (Throwable var5) {
             }
          } else {
-            PositionedSoundInstance inst = PositionedSoundInstance.ui(ref.value(), 1.0F, this.selectedVolume);
+            SimpleSoundInstance inst = SimpleSoundInstance.forUI(ref.value(), 1.0F, this.selectedVolume);
             this.builtinPlaying=inst;cl.getSoundManager().play(inst);
          }
 
@@ -282,9 +282,9 @@ public class SoundManager {
 
          if("silent".equalsIgnoreCase(rt))return null;
          if(!java.util.Set.of("nokia","office","iphone","blackberry","atomic","samsung").contains(rt))rt="nokia";
-         return SoundEvent.of(net.minecraft.util.Identifier.of(SimpleVoiceCallClient.RESOURCE_ID,"ring_"+rt));
+         return SoundEvent.createVariableRangeEvent(net.minecraft.resources.Identifier.fromNamespaceAndPath(SimpleVoiceCallClient.RESOURCE_ID,"ring_"+rt));
       } catch (Throwable ignored) {
-         return SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP;
+         return SoundEvents.EXPERIENCE_ORB_PICKUP;
       }
    }
 
@@ -343,7 +343,7 @@ public class SoundManager {
       } catch (Throwable var12) {
       }
 
-      return SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP;
+      return SoundEvents.EXPERIENCE_ORB_PICKUP;
    }
 }
 

@@ -1,5 +1,5 @@
 plugins {
-    id "fabric-loom" version "1.13.4"
+    id "net.fabricmc.fabric-loom" version "1.17.21"
     id "maven-publish"
 }
 
@@ -7,7 +7,7 @@ version = project.mod_version
 group = project.maven_group
 
 base {
-    archivesName = project.archives_base_name
+    archivesName = "${project.archives_base_name}-mc${project.minecraft_version}-fabric"
 }
 
 repositories {
@@ -31,12 +31,9 @@ dependencies {
     include "javazoom:jlayer:1.0.1"
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-    // Development uses Yarn/named mappings. The copied source still contains
-    // many intermediary names, so the first project task is remapping/cleanup.
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // Original code imports both the public API and internal Simple Voice Chat
     // classes. The full Modrinth mod jar is compile-only here. Keep it out of
@@ -63,12 +60,12 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
-    options.release = 21
+    options.release = 25
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
     withSourcesJar()
 }

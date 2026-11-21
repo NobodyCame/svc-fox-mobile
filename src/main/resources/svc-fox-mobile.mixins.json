@@ -2,10 +2,11 @@
   "required": true,
   "package": "dev.yukiinotenshi.simplephonepromax.mixin",
   "priority": 2000,
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "mixins": [],
   "client": [
     "ClientPlayerInteractionManagerMixin",
+    "MinecraftScreenTrackerMixin",
     "OriginalClientSuppressionMixin",
     "OriginalVoicechatSuppressionMixin",
     "OriginalPhoneSuppressionMixin",

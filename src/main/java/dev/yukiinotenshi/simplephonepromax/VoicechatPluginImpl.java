@@ -19,7 +19,7 @@ import de.maxhenkel.voicechat.voice.common.PlayerState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +48,7 @@ public class VoicechatPluginImpl implements VoicechatPlugin {
       if(event.isConnected()&&!dev.yukiinotenshi.simplephonepromax.network.EncryptedCalls.active()&&!SimpleVoiceCallClient.callManager.isInCall())setMicrophoneMuted(false);
       if (!event.isConnected()) {
          ModNetworking.onVoicechatDisconnected();
-         MinecraftClient.getInstance().execute(SimpleVoiceCallClient.callManager::connectionLost);
+         Minecraft.getInstance().execute(SimpleVoiceCallClient.callManager::connectionLost);
       }
    }
 

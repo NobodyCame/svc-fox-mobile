@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.*;
 import java.util.Locale;
 import javax.sound.sampled.*;
-import net.minecraft.client.sound.OggAudioStream;
+import net.minecraft.client.sounds.JOrbisAudioStream;
 
 public final class ExternalSoundPlayer {
     private static final int MAX_PCM = 32 * 1024 * 1024;
@@ -23,7 +23,7 @@ public final class ExternalSoundPlayer {
         if(name.endsWith(".mp3")) {
             var pcm=Mp3Ringtone.decode(path); data=pcm.bytes();format=pcm.format();
         } else if(name.endsWith(".ogg")) {
-            try(var input=Files.newInputStream(path);var ogg=new OggAudioStream(input);var output=new ByteArrayOutputStream()) {
+            try(var input=Files.newInputStream(path);var ogg=new JOrbisAudioStream(input);var output=new ByteArrayOutputStream()) {
                 int limit=Math.min(MAX_PCM,(int)(ogg.getFormat().getFrameRate()*ogg.getFormat().getFrameSize()*60));
                 while(output.size()<limit) {
                     check(deadline,output.size());

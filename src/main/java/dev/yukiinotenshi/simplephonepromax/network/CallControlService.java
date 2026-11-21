@@ -15,8 +15,8 @@ import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 /** All game state is accessed on the client thread; HTTP requests are serialized. */
 public final class CallControlService {
@@ -48,14 +48,14 @@ public final class CallControlService {
       return available()&&holds.values().stream().anyMatch(h->group.equals(uuid(h,"group"))&&Set.of("preparing","holding").contains(str(h,"status")));
    }
    public static boolean canHoldIncoming() {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       return incoming!=null&&incoming.kind.equals("waiting")&&held==null&&!deciding&&calls().isInActiveCall()&&available()
-         &&supports(c.player.getUuid(),"call_hold_v1")&&groupParticipants().stream().allMatch(p->supports(p.getUuid(),"call_hold_v1"));
+         &&supports(c.player.getUUID(),"call_hold_v1")&&groupParticipants().stream().allMatch(p->supports(p.getUuid(),"call_hold_v1"));
    }
    public static void holdAndAnswer() {
       if(!canHoldIncoming())return;
       Offer offer=incoming;UUID group=VoicechatPluginImpl.getOwnGroupId();
-      PlayerState anchor=groupParticipants().stream().filter(p->!p.getUuid().equals(MinecraftClient.getInstance().player.getUuid())).findFirst().orElse(null);
+      PlayerState anchor=groupParticipants().stream().filter(p->!p.getUuid().equals(Minecraft.getInstance().player.getUUID())).findFirst().orElse(null);
       if(anchor==null)return;
       String id=UUID.randomUUID().toString();JsonObject b=identity();b.addProperty("id",id);b.addProperty("group",group.toString());
       UUID created=VoiceCallTransport.getCreatedGroup();deciding=true;long generation=epoch;
@@ -86,17 +86,17 @@ public final class CallControlService {
    public static void resumeHeld() {
       if(!hasHeld()||!available())return;
       Held saved=held;
-      PlayerState peer=VoicechatPluginImpl.getPlayerStates().stream().filter(p->saved.group.equals(p.getGroup())&&!p.getUuid().equals(MinecraftClient.getInstance().player.getUuid())).findFirst().orElse(null);
+      PlayerState peer=VoicechatPluginImpl.getPlayerStates().stream().filter(p->saved.group.equals(p.getGroup())&&!p.getUuid().equals(Minecraft.getInstance().player.getUUID())).findFirst().orElse(null);
       if(peer==null||!VoiceCallTransport.joinConsentedCall(saved.group,peer.getUuid(),peer.getName(),true)){message("phone.control.join_failed");return;}
       VoiceCallTransport.restoreCreatedGroup(saved.created);
       // Keep the backend hold until the polling snapshot confirms rejoining.
    }
    public static void receiveLegacyWaiting(UUID caller,String name,UUID group) {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       if(incoming!=null||!calls().isInActiveCall()||!dev.yukiinotenshi.simplephonepromax.phone.CallPolicy.allows(caller,true)||!PhoneDetector.hasPhone(c)||SimpleVoiceCallClient.config.isBlocked(caller)||SimpleVoiceCallClient.config.isBlocked(name))return;
-      incoming=new Offer("local:"+group,"waiting",caller,name,c.player.getUuid(),c.player.getName().getString(),group,caller,VoicechatPluginImpl.getOwnGroupId(),"pending");
+      incoming=new Offer("local:"+group,"waiting",caller,name,c.player.getUUID(),c.player.getName().getString(),group,caller,VoicechatPluginImpl.getOwnGroupId(),"pending");
       incomingAt=System.currentTimeMillis();message("phone.waiting.arrived");
-      if(c.currentScreen instanceof ActiveCallScreen)c.setScreen(new CallOfferScreen());
+      if(dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen)c.setScreenAndShow(new CallOfferScreen());
    }
    public static boolean canInvite(UUID target) {
       JsonObject peer=peers.get(target);
@@ -104,7 +104,7 @@ public final class CallControlService {
    }
    public static boolean invite(UUID target) {
       if(!canInvite(target))return false;
-      create("invite",target,VoicechatPluginImpl.getOwnGroupId(),MinecraftClient.getInstance().player.getUuid());return true;
+      create("invite",target,VoicechatPluginImpl.getOwnGroupId(),Minecraft.getInstance().player.getUUID());return true;
    }
 
    public record Offer(String id, String kind, UUID source, String sourceName, UUID target,
@@ -119,7 +119,7 @@ public final class CallControlService {
    private static CallManager calls() { return SimpleVoiceCallClient.callManager; }
    private static JsonArray successors=new JsonArray();
    private static String ownershipNotice="";
-   public static JsonObject ownershipRequest(){var c=MinecraftClient.getInstance();if(c.player==null)return null;for(var item:successors){var r=item.getAsJsonObject();if(c.player.getUuid().toString().equals(str(r,"target"))&&!r.get("accepted").getAsBoolean())return r;}return null;}
+   public static JsonObject ownershipRequest(){var c=Minecraft.getInstance();if(c.player==null)return null;for(var item:successors){var r=item.getAsJsonObject();if(c.player.getUUID().toString().equals(str(r,"target"))&&!r.get("accepted").getAsBoolean())return r;}return null;}
    public static boolean canHandover(){return isGroupCreator()&&groupParticipants().stream().allMatch(p->supports(p.getUuid(),"group_owner_v1"));}
    public static void offerOwnership(UUID target,boolean deputy){if(!canHandover())return;JsonObject b=identity();b.addProperty("group",VoicechatPluginImpl.getOwnGroupId().toString());b.addProperty("target",target.toString());b.addProperty("deputy",deputy);finish(post("owner-offer",b),(v,e)->{if(e!=null)message("phone.control.unavailable");});}
    public static void respondOwnership(boolean accept){var request=ownershipRequest();if(request==null)return;JsonObject b=identity();b.addProperty("group",str(request,"group"));finish(post(accept?"owner-accept":"owner-decline",b),(v,e)->{if(e!=null)message("phone.control.unavailable");});}
@@ -145,9 +145,9 @@ public final class CallControlService {
       if(target==null||!supports(target,"dnd_v1"))return false;
       JsonObject peer=peers.get(target);
       if(peer==null||!peer.has("dnd")||!peer.get("dnd").getAsBoolean())return false;
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       if(c.player==null||!peer.has("dnd_allow"))return true;
-      for(JsonElement value:peer.getAsJsonArray("dnd_allow"))if(c.player.getUuid().toString().equals(value.getAsString()))return false;
+      for(JsonElement value:peer.getAsJsonArray("dnd_allow"))if(c.player.getUUID().toString().equals(value.getAsString()))return false;
       return true;
    }
    public static CompletableFuture<JsonObject> diagnosticSnapshot(){return post("poll",snapshot());}
@@ -159,14 +159,14 @@ public final class CallControlService {
    public static boolean canTransferTo(UUID target) {
       JsonObject peer=peers.get(target);
       return supports(target,"call_transfer_v1")&&peer!=null&&"NONE".equals(str(peer,"state"))&&str(peer,"group").isEmpty()&&peer.get("phone").getAsBoolean()
-         &&(groupParticipants().stream().filter(p->!p.getUuid().equals(MinecraftClient.getInstance().player.getUuid())).count()<=1||supports(target,"group_transfer_v1"));
+         &&(groupParticipants().stream().filter(p->!p.getUuid().equals(Minecraft.getInstance().player.getUUID())).count()<=1||supports(target,"group_transfer_v1"));
    }
    public static boolean canTransferCurrent() {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       if(c.player==null||!calls().isInActiveCall()||!available())return false;
       UUID group=VoicechatPluginImpl.getOwnGroupId();
       var others=VoicechatPluginImpl.getPlayerStates().stream()
-         .filter(p->group!=null&&group.equals(p.getGroup())&&!p.getUuid().equals(c.player.getUuid())).toList();
+         .filter(p->group!=null&&group.equals(p.getGroup())&&!p.getUuid().equals(c.player.getUUID())).toList();
       return !others.isEmpty()&&others.stream().allMatch(p->supports(p.getUuid(),others.size()>1?"group_transfer_v1":"call_transfer_v1"));
    }
    public static List<PlayerState> groupParticipants() {
@@ -174,17 +174,17 @@ public final class CallControlService {
       return VoicechatPluginImpl.getPlayerStates().stream().filter(p->group!=null&&group.equals(p.getGroup())).toList();
    }
    public static boolean isGroupCreator() {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       UUID group=VoicechatPluginImpl.getOwnGroupId();
       return c.player!=null&&available()&&calls().isInActiveCall()&&group!=null
-         &&c.player.getUuid().equals(groupOwners.get(group));
+         &&c.player.getUUID().equals(groupOwners.get(group));
    }
    public static boolean canRemove(UUID target) {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       UUID group=VoicechatPluginImpl.getOwnGroupId();
-      if(!isGroupCreator()||removing||pendingRemoval!=null||target.equals(c.player.getUuid())
+      if(!isGroupCreator()||removing||pendingRemoval!=null||target.equals(c.player.getUUID())
          ||!supports(target,"group_remove_v1")||!VoiceCallTransport.playerInGroup(target,group))return false;
-      Set<UUID> members=new HashSet<>();members.add(c.player.getUuid());
+      Set<UUID> members=new HashSet<>();members.add(c.player.getUUID());
       groupParticipants().forEach(p->members.add(p.getUuid()));
       return members.size()>=3&&members.stream().allMatch(memberId->supports(memberId,"group_remove_v1"));
    }
@@ -204,7 +204,7 @@ public final class CallControlService {
       });
    }
    private static void handleRemoval(JsonObject command) {
-      UUID self=MinecraftClient.getInstance().player.getUuid();
+      UUID self=Minecraft.getInstance().player.getUUID();
       String id=str(command,"id"),status=str(command,"status");
       if(id.equals(pendingRemoval)&&!status.equals("pending")) {
          pendingRemoval=null;message(status.equals("completed")?"phone.group.removed":"phone.group.remove_failed");
@@ -225,11 +225,11 @@ public final class CallControlService {
       }
    }
    public static void message(String key) {
-      MinecraftClient c=MinecraftClient.getInstance();
-      if(c.player!=null)dev.yukiinotenshi.simplephonepromax.phone.PhoneMessages.show(Text.translatable(key).getString());
+      Minecraft c=Minecraft.getInstance();
+      if(c.player!=null)dev.yukiinotenshi.simplephonepromax.phone.PhoneMessages.show(Component.translatable(key).getString());
    }
    public static void deactivate() {
-      if(!context.isEmpty()&&MinecraftClient.getInstance().player!=null) {
+      if(!context.isEmpty()&&Minecraft.getInstance().player!=null) {
          JsonObject b=snapshot();b.addProperty("protocol",0);b.add("capabilities",new JsonArray());b.addProperty("state","NONE");post("poll",b);
       }
       reset();
@@ -239,19 +239,19 @@ public final class CallControlService {
       incoming=outgoing=joining=null;successors=new JsonArray();peers.clear();handled.clear();deferred.clear();
       peerCapabilitySeen.clear();groupOwners.clear();handledRemovals.clear();pendingRemoval=null;removing=false;holds.clear();held=null;holdThenAnswer=null;
    }
-   private static String server(MinecraftClient c) {
-      return c.getCurrentServerEntry()==null?"singleplayer":c.getCurrentServerEntry().address.toLowerCase(Locale.ROOT);
+   private static String server(Minecraft c) {
+      return c.getCurrentServer()==null?"singleplayer":c.getCurrentServer().ip.toLowerCase(Locale.ROOT);
    }
    private static JsonObject identity() {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       JsonObject body=new JsonObject();
-      body.addProperty("player",c.player.getUuid().toString());
+      body.addProperty("player",c.player.getUUID().toString());
       body.addProperty("server",server(c));
       body.addProperty("secret",SimpleVoiceCallClient.config.callControlSecret);
       return body;
    }
    private static JsonObject snapshot() {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       JsonObject b=identity();
       b.addProperty("name",c.player.getName().getString());
       UUID group=VoicechatPluginImpl.getOwnGroupId();
@@ -275,17 +275,17 @@ public final class CallControlService {
       UUID created=VoiceCallTransport.getCreatedGroup();
       b.addProperty("created_group",created==null?null:created.toString());
       Set<UUID> ids=new HashSet<>();
-      if(group!=null) {ids.add(c.player.getUuid());groupParticipants().forEach(p->ids.add(p.getUuid()));}
+      if(group!=null) {ids.add(c.player.getUUID());groupParticipants().forEach(p->ids.add(p.getUuid()));}
       JsonArray members=new JsonArray();ids.forEach(id->members.add(id.toString()));b.add("members",members);
       JsonArray acks=new JsonArray();holds.values().stream().filter(h->group!=null&&group.equals(uuid(h,"group"))&&Set.of("preparing","holding").contains(str(h,"status"))).forEach(h->acks.add(str(h,"id")));b.add("hold_acks",acks);
       return b;
    }
    public static CompletableFuture<JsonObject> extensionWithSnapshot(String action,JsonObject fields){
-      if(MinecraftClient.getInstance().player==null)return CompletableFuture.failedFuture(new IllegalStateException("player disconnected"));
+      if(Minecraft.getInstance().player==null)return CompletableFuture.failedFuture(new IllegalStateException("player disconnected"));
       return post("poll",snapshot()).thenCompose(v->extension(action,fields));
    }
    public static CompletableFuture<JsonObject> extension(String action,JsonObject fields){
-      if(MinecraftClient.getInstance().player==null)return CompletableFuture.failedFuture(new IllegalStateException("player disconnected"));
+      if(Minecraft.getInstance().player==null)return CompletableFuture.failedFuture(new IllegalStateException("player disconnected"));
       JsonObject b=identity();fields.entrySet().forEach(e->b.add(e.getKey(),e.getValue()));return post(action,b);
    }
    private static synchronized CompletableFuture<JsonObject> post(String action, JsonObject body) {
@@ -309,16 +309,16 @@ public final class CallControlService {
    }
    private static void finish(CompletableFuture<JsonObject> request, java.util.function.BiConsumer<JsonObject,Throwable> result) {
       long generation=epoch;
-      request.whenComplete((value,error)->MinecraftClient.getInstance().execute(()->{
+      request.whenComplete((value,error)->Minecraft.getInstance().execute(()->{
          if(generation==epoch)result.accept(value,error);
       }));
    }
    public static void tick() {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       if(incoming!=null&&incoming.id.startsWith("local:")&&(System.currentTimeMillis()-incomingAt>45000||!validIncoming(incoming)))incoming=null;
       if(dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()||c.player==null||!VoicechatPluginImpl.isReady()||!SimpleVoiceCallClient.config.backendNumbersEnabled
          ||SimpleVoiceCallClient.config.backendBaseUrl.isBlank()) {if(!context.isEmpty())reset();return;}
-      String key=c.player.getUuid()+"@"+server(c)+"@"+SimpleVoiceCallClient.config.backendBaseUrl;
+      String key=c.player.getUUID()+"@"+server(c)+"@"+SimpleVoiceCallClient.config.backendBaseUrl;
       if(!key.equals(context)) {reset();context=key;}
       if(SimpleVoiceCallClient.config.callControlSecret==null||SimpleVoiceCallClient.config.callControlSecret.isBlank()) {
          SimpleVoiceCallClient.config.callControlSecret=UUID.randomUUID().toString()+UUID.randomUUID();
@@ -364,7 +364,7 @@ public final class CallControlService {
             if(v.has("secure"))EncryptedCalls.poll(v.getAsJsonArray("secure"));
             successors=v.has("successors")?v.getAsJsonArray("successors"):new JsonArray();
             var ownerRequest=ownershipRequest();String ownerKey=ownerRequest==null?"":ownerRequest.toString();
-            if(!ownerKey.equals(ownershipNotice)&&ownerRequest!=null&&MinecraftClient.getInstance().player!=null)MinecraftClient.getInstance().player.sendMessage(Text.literal("Предложено управление группой — откройте настройки").formatted(net.minecraft.util.Formatting.YELLOW),false);
+            if(!ownerKey.equals(ownershipNotice)&&ownerRequest!=null&&Minecraft.getInstance().player!=null)Minecraft.getInstance().player.sendSystemMessage(Component.literal("Предложено управление группой — откройте настройки").withStyle(net.minecraft.ChatFormatting.YELLOW));
             ownershipNotice=ownerKey;
             if(v.has("owners"))v.getAsJsonObject("owners").entrySet().forEach(ownerEntry->groupOwners.put(UUID.fromString(ownerEntry.getKey()),UUID.fromString(ownerEntry.getValue().getAsString())));
             handleHolds(v);
@@ -375,7 +375,7 @@ public final class CallControlService {
       if(incoming!=null&&!validIncoming(incoming)) {Offer old=incoming;incoming=null;respond(old,"declined",false);}
    }
    private static void handle(Offer offer) {
-      UUID self=MinecraftClient.getInstance().player.getUuid();
+      UUID self=Minecraft.getInstance().player.getUUID();
       if(offer.source.equals(self)&&outgoing!=null&&outgoing.id.equals(offer.id)) {
          outgoing=offer;
          if(!Set.of("pending","accepted").contains(offer.status)) {
@@ -410,14 +410,14 @@ public final class CallControlService {
       deferred.remove(offer.id);
       handled.add(offer.id);incoming=offer;incomingAt=System.currentTimeMillis();
       message(offer.kind.equals("waiting")?"phone.waiting.arrived":"phone.transfer.arrived");
-      MinecraftClient c=MinecraftClient.getInstance();
-      if(c.currentScreen instanceof ActiveCallScreen)c.setScreen(new CallOfferScreen());
+      Minecraft c=Minecraft.getInstance();
+      if(dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen)c.setScreenAndShow(new CallOfferScreen());
    }
    public static boolean validIncoming(Offer o) {
-      MinecraftClient c=MinecraftClient.getInstance();
+      Minecraft c=Minecraft.getInstance();
       if(c.player==null||!PhoneDetector.hasPhone(c)||!dev.yukiinotenshi.simplephonepromax.phone.CallPolicy.allows(o.source,o.kind.equals("waiting"))||SimpleVoiceCallClient.config.isBlocked(o.source)
          ||SimpleVoiceCallClient.config.isBlocked(o.sourceName)||!VoiceCallTransport.playerInGroup(o.source,o.group))return false;
-      if(o.id.startsWith("local:"))return calls().isInActiveCall()&&Objects.equals(VoicechatPluginImpl.getOwnGroupId(),o.targetGroup)&&VoiceCallTransport.isIncomingGroupFor(VoiceCallTransport.findGroup(o.group),c.player.getUuid());
+      if(o.id.startsWith("local:"))return calls().isInActiveCall()&&Objects.equals(VoicechatPluginImpl.getOwnGroupId(),o.targetGroup)&&VoiceCallTransport.isIncomingGroupFor(VoiceCallTransport.findGroup(o.group),c.player.getUUID());
       String capability=o.kind.equals("waiting")?"call_waiting_v1":o.kind.equals("invite")?"group_invite_v1":"call_transfer_v1";
       if(!supports(o.source,capability)||(o.kind.equals("transfer")&&!supports(o.anchor,capability)))return false;
       Group group=VoiceCallTransport.findGroup(o.group);
@@ -425,7 +425,7 @@ public final class CallControlService {
       PlayerState source=VoiceCallTransport.findState(o.source);
       if(source==null||SimpleVoiceCallClient.config.isBlocked(source.getName()))return false;
       UUID own=VoicechatPluginImpl.getOwnGroupId();
-      if(o.kind.equals("waiting"))return VoiceCallTransport.isIncomingGroupFor(group,c.player.getUuid())
+      if(o.kind.equals("waiting"))return VoiceCallTransport.isIncomingGroupFor(group,c.player.getUUID())
          &&((calls().isInActiveCall()&&Objects.equals(own,o.targetGroup))||(!calls().isInCall()&&own==null));
       return !calls().isInCall()&&own==null&&VoiceCallTransport.playerInGroup(o.anchor,o.group)
          &&!SimpleVoiceCallClient.config.isBlocked(o.anchor);
@@ -446,7 +446,7 @@ public final class CallControlService {
             if(!VoiceCallTransport.joinConsentedCall(offer.group,offer.source,offer.sourceName,true)){message("phone.control.join_failed");return;}
          }
          incoming=null;
-         if(interactive)MinecraftClient.getInstance().setScreen(calls().isInCall()?new ActiveCallScreen():null);
+         if(interactive)Minecraft.getInstance().setScreenAndShow(calls().isInCall()?new ActiveCallScreen():null);
          return;
       }
       if(context.isEmpty())return;
@@ -465,16 +465,16 @@ public final class CallControlService {
             }
             joining=offer;joinDeadline=System.currentTimeMillis()+12000;
          } else if(interactive)CallManager.addHistory(offer.sourceName,offer.source,"declined_in",0);
-         if(interactive)MinecraftClient.getInstance().setScreen(calls().isInCall()?new ActiveCallScreen():null);
+         if(interactive)Minecraft.getInstance().setScreenAndShow(calls().isInCall()?new ActiveCallScreen():null);
       });
    }
    public static void ensureWaiting(UUID target,UUID group) {
       if(outgoing!=null||creating||!canWait(target))return;
-      create("waiting",target,group,MinecraftClient.getInstance().player.getUuid());
+      create("waiting",target,group,Minecraft.getInstance().player.getUUID());
    }
    public static void transfer(UUID target) {
       UUID group=VoicechatPluginImpl.getOwnGroupId();
-      UUID self=MinecraftClient.getInstance().player.getUuid();
+      UUID self=Minecraft.getInstance().player.getUUID();
       List<PlayerState> others=VoicechatPluginImpl.getPlayerStates().stream()
          .filter(p->group!=null&&group.equals(p.getGroup())&&!self.equals(p.getUuid())).toList();
       if(!calls().isInActiveCall()||!canTransferTo(target)||others.isEmpty()||others.getFirst().getUuid().equals(target)
@@ -495,7 +495,7 @@ public final class CallControlService {
          outgoing=Offer.read(v);
          if(cancelCreation||!group.equals(VoicechatPluginImpl.getOwnGroupId())) {cancelOutgoing();return;}
          if(kind.equals("transfer")||kind.equals("invite")) {
-            message(kind.equals("transfer")?"phone.transfer.sent":"phone.group.invite_sent");MinecraftClient.getInstance().setScreen(new ActiveCallScreen());
+            message(kind.equals("transfer")?"phone.transfer.sent":"phone.group.invite_sent");Minecraft.getInstance().setScreenAndShow(new ActiveCallScreen());
          }
       });
    }

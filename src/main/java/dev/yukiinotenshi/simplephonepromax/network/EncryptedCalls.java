@@ -8,9 +8,8 @@ import de.maxhenkel.voicechat.api.VoicechatClientApi;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.api.opus.*;
 import de.maxhenkel.voicechat.api.audiochannel.ClientStaticAudioChannel;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
 import java.util.*;
+import net.minecraft.client.Minecraft;
 
 public final class EncryptedCalls {
     public static final boolean ENABLED=false;
@@ -36,9 +35,9 @@ public final class EncryptedCalls {
     public static synchronized void poll(JsonArray sessions){
         if(!ENABLED)return;
         if(session!=null)return;
-        var client=MinecraftClient.getInstance();if(client.player==null)return;
+        var client=Minecraft.getInstance();if(client.player==null)return;
         boolean hadIncoming=incoming!=null;incoming=null;
-        for(var item:sessions){var s=item.getAsJsonObject();if(client.player.getUuid().toString().equals(str(s,"target"))&&CallPolicy.allows(UUID.fromString(str(s,"source")),false)&&!SimpleVoiceCallClient.callManager.isInCall()) {incoming=s;if(!str(s,"id").equals(notified)){notified=str(s,"id");dev.yukiinotenshi.simplephonepromax.gui.PhoneNotification.show("Шифрованный вызов","Откройте телефон");SimpleVoiceCallClient.soundManager.playRing(true);}break;}}
+        for(var item:sessions){var s=item.getAsJsonObject();if(client.player.getUUID().toString().equals(str(s,"target"))&&CallPolicy.allows(UUID.fromString(str(s,"source")),false)&&!SimpleVoiceCallClient.callManager.isInCall()) {incoming=s;if(!str(s,"id").equals(notified)){notified=str(s,"id");dev.yukiinotenshi.simplephonepromax.gui.PhoneNotification.show("Шифрованный вызов","Откройте телефон");SimpleVoiceCallClient.soundManager.playRing(true);}break;}}
         if(hadIncoming&&incoming==null)SimpleVoiceCallClient.soundManager.stopRing();
     }
     private static void prepare(JsonObject s)throws Exception {
@@ -50,9 +49,9 @@ public final class EncryptedCalls {
         if(!ENABLED)return;
         if(VoicemailClient.busy()||active()||api==null||SimpleVoiceCallClient.callManager.isInCall()||VoicechatPluginImpl.getOwnGroupId()!=null||!CallControlService.supports(target,"encrypted_voice_v1")){dev.yukiinotenshi.simplephonepromax.phone.PhoneMessages.show("Шифрованная линия недоступна: завершите текущий разговор и проверьте связь обоих игроков");return;}
         try{
-            JsonObject s=new JsonObject();s.addProperty("id",UUID.randomUUID().toString());s.addProperty("source",MinecraftClient.getInstance().player.getUuid().toString());s.addProperty("target",target.toString());prepare(s);
+            JsonObject s=new JsonObject();s.addProperty("id",UUID.randomUUID().toString());s.addProperty("source",Minecraft.getInstance().player.getUUID().toString());s.addProperty("target",target.toString());prepare(s);
             JsonObject b=body();b.addProperty("target",target.toString());b.addProperty("key",crypto.publicKey());request("secure-offer",b);
-            MinecraftClient.getInstance().setScreen(new EncryptedCallScreen());
+            Minecraft.getInstance().setScreenAndShow(new EncryptedCallScreen());
         }catch(Exception e){SimpleVoiceCallClient.LOGGER.warn("Encrypted call setup failed",e);fail("Не удалось начать шифрованный звонок");}
     }
     public static synchronized void accept(){
@@ -64,7 +63,7 @@ public final class EncryptedCalls {
     private static JsonObject body(){JsonObject b=new JsonObject();b.addProperty("id",str(session,"id"));return b;}
     private static void request(String action,JsonObject body){
         long epoch=generation;busy=true;
-        CallControlService.extension(action,body).whenComplete((v,e)->MinecraftClient.getInstance().execute(()->{synchronized(EncryptedCalls.class){
+        CallControlService.extension(action,body).whenComplete((v,e)->Minecraft.getInstance().execute(()->{synchronized(EncryptedCalls.class){
             if(epoch!=generation)return;busy=false;
             if(e!=null){SimpleVoiceCallClient.LOGGER.warn("Encrypted call action {} failed: {}",action,e.toString());fail("Шифрованный вызов недоступен");return;}
             try{apply(v);}catch(Exception invalid){fail("Ошибка проверки шифрованного аудио");}
@@ -72,7 +71,7 @@ public final class EncryptedCalls {
     }
     private static void apply(JsonObject s)throws Exception {
         if(session==null||!str(session,"id").equals(str(s,"id")))return;
-        boolean source=MinecraftClient.getInstance().player.getUuid().toString().equals(str(s,"source"));
+        boolean source=Minecraft.getInstance().player.getUUID().toString().equals(str(s,"source"));
         if(!str(s,source?"source_key":"target_key").equals(crypto.publicKey()))throw new SecurityException("local key replaced");
         if(!derived&&!str(s,"target_key").isEmpty()){
             crypto.derive(str(s,"id"),str(s,"source"),str(s,"target"),str(s,"source_key"),str(s,"target_key"),source);derived=true;
@@ -86,10 +85,10 @@ public final class EncryptedCalls {
         // Cancel before any processing, including unverified or failed handshakes.
         short[] audio=event.getRawAudio();event.cancel();event.setRawAudio(new short[audio.length]);
         if(!ready||VoicechatPluginImpl.isMicrophoneMuted())return;
-        try{var packet=crypto.encrypt(encoder.encode(audio));JsonObject f=new JsonObject();f.addProperty("seq",packet.sequence());f.addProperty("data",Base64.getEncoder().encodeToString(packet.ciphertext()));if(frames.size()>=10)frames.removeFirst();frames.addLast(f);}catch(Exception e){ready=false;MinecraftClient.getInstance().execute(()->fail("Ошибка шифрования; микрофон остановлен"));}
+        try{var packet=crypto.encrypt(encoder.encode(audio));JsonObject f=new JsonObject();f.addProperty("seq",packet.sequence());f.addProperty("data",Base64.getEncoder().encodeToString(packet.ciphertext()));if(frames.size()>=10)frames.removeFirst();frames.addLast(f);}catch(Exception e){ready=false;Minecraft.getInstance().execute(()->fail("Ошибка шифрования; микрофон остановлен"));}
     }
     public static synchronized void tick(){
-        if(session==null)return;var client=MinecraftClient.getInstance();long now=System.currentTimeMillis();
+        if(session==null)return;var client=Minecraft.getInstance();long now=System.currentTimeMillis();
         if(client.player==null||!serverContext.equals(dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles.current())||!VoicechatPluginImpl.isReady()){end();return;}
         if(now-lastResponse>8000){fail("Соединение потеряно; звонок завершён");return;}
         if(!busy&&now>=nextMedia){nextMedia=now+100;JsonObject b=body();JsonArray batch=new JsonArray();while(!frames.isEmpty())batch.add(frames.removeFirst());b.add("frames",batch);request("secure-media",b);}
@@ -98,7 +97,7 @@ public final class EncryptedCalls {
     public static synchronized void end(){
         SimpleVoiceCallClient.soundManager.stopRing();
         JsonObject closing=session!=null?session:incoming;
-        if(closing!=null&&MinecraftClient.getInstance().player!=null){JsonObject b=new JsonObject();b.addProperty("id",str(closing,"id"));CallControlService.extension("secure-end",b);}
+        if(closing!=null&&Minecraft.getInstance().player!=null){JsonObject b=new JsonObject();b.addProperty("id",str(closing,"id"));CallControlService.extension("secure-end",b);}
         if(session!=null)VoicechatPluginImpl.setMicrophoneMuted(false);
         generation++;ready=verified=derived=busy=false;session=incoming=null;frames.clear();
         if(encoder!=null)encoder.close();if(decoder!=null)decoder.close();if(crypto!=null)crypto.close();encoder=null;decoder=null;crypto=null;channel=null;

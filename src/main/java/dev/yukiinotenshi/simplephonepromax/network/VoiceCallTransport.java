@@ -13,7 +13,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public final class VoiceCallTransport {
    private static final String CALL_PREFIX = "C";
@@ -231,7 +231,7 @@ public final class VoiceCallTransport {
 
    public static void tick() {
       if(PrivateCalls.busy())return;
-      MinecraftClient client = MinecraftClient.getInstance();
+      Minecraft client = Minecraft.getInstance();
       if (client.player != null && VoicechatPluginImpl.isReady()) {
          if (signalLeaveTicks > 0 && --signalLeaveTicks == 0) {
             UUID ownGroup = VoicechatPluginImpl.getOwnGroupId();
@@ -261,7 +261,7 @@ public final class VoiceCallTransport {
             }
          }
 
-         UUID self = client.player.getUuid();
+         UUID self = client.player.getUUID();
          String incomingName = "C" + encodeUuid(self);
          String inviteName = INVITE_PREFIX + encodeUuid(self);
          String declineName = "D" + encodeUuid(self);
@@ -351,8 +351,8 @@ public final class VoiceCallTransport {
             acceptingIncoming = false;
             client.execute(() -> {
                SimpleVoiceCallClient.callManager.acceptCall();
-               if (!(client.currentScreen instanceof ActiveCallScreen)) {
-                  client.setScreen(new ActiveCallScreen());
+               if (!(dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen)) {
+                  client.setScreenAndShow(new ActiveCallScreen());
                }
             });
          }
@@ -368,8 +368,8 @@ public final class VoiceCallTransport {
             pendingJoinTicks = 0;
             client.execute(() -> {
                SimpleVoiceCallClient.callManager.joinGroupCall("Групповой звонок: " + (joinedName != null ? joinedName : ""), joinedTarget, joinedGroup);
-               if (!(client.currentScreen instanceof ActiveCallScreen)) {
-                  client.setScreen(new ActiveCallScreen());
+               if (!(dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen)) {
+                  client.setScreenAndShow(new ActiveCallScreen());
                }
             });
          }
@@ -383,8 +383,8 @@ public final class VoiceCallTransport {
                outgoingTarget = null;
                client.execute(() -> {
                   SimpleVoiceCallClient.callManager.acceptCall(acceptedBy, self, true);
-                  if (!(client.currentScreen instanceof ActiveCallScreen)) {
-                     client.setScreen(new ActiveCallScreen());
+                  if (!(dev.yukiinotenshi.simplephonepromax.gui.ScreenTracker.current() instanceof ActiveCallScreen)) {
+                     client.setScreenAndShow(new ActiveCallScreen());
                   }
                });
             } else if (target != null && target.getGroup() != null && !ownGroup.equals(target.getGroup())
@@ -441,7 +441,7 @@ public final class VoiceCallTransport {
       }
 
       if (!SimpleVoiceCallClient.callManager.isInCall()) {
-         if (!PhoneDetector.hasPhone(MinecraftClient.getInstance())) {
+         if (!PhoneDetector.hasPhone(Minecraft.getInstance())) {
             CallManager.addHistory(name, callerUuid, "missed_in", 0);
             decline(callerUuid);
             return;

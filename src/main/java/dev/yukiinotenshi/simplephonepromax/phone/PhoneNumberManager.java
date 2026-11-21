@@ -25,7 +25,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.Map.Entry;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public class PhoneNumberManager {
    public static final PhoneNumberManager.Region PHONE_FORMAT = new PhoneNumberManager.Region("PHONE", "1", "Телефон", 10);
@@ -148,9 +148,9 @@ public class PhoneNumberManager {
    }
 
    public static String regenerateMyNumber() {
-      MinecraftClient mc = MinecraftClient.getInstance();
+      Minecraft mc = Minecraft.getInstance();
       if (mc != null && mc.player != null) {
-         UUID myUuid = mc.player.getUuid();
+         UUID myUuid = mc.player.getUUID();
          String oldNum = originalUuidToNumber.get(myUuid);
          if (oldNum != null) {
             originalNumberToUuid.remove(oldNum, myUuid);
@@ -171,9 +171,9 @@ public class PhoneNumberManager {
    }
 
    public static String getMyNumber() {
-      MinecraftClient mc = MinecraftClient.getInstance();
+      Minecraft mc = Minecraft.getInstance();
       if (mc != null && mc.player != null) {
-         return getNumberFor(mc.player.getUuid());
+         return getNumberFor(mc.player.getUUID());
       } else {
          return onlyDigits(ORIGINAL_LEGACY_FORMAT.countryCode + "00000");
       }
@@ -249,9 +249,9 @@ public class PhoneNumberManager {
    }
 
    public static String getMyDisplayNumber() {
-      MinecraftClient mc = MinecraftClient.getInstance();
+      Minecraft mc = Minecraft.getInstance();
       if (mc != null && mc.player != null) {
-         String number=getDisplayNumberFor(mc.player.getUuid());
+         String number=getDisplayNumberFor(mc.player.getUUID());
          if(isValidProMaxNumber(number))return number;
          String cached=dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.config==null?null:dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.config.backendCachedNumber;
          return isValidProMaxNumber(cached)?cached:number;
@@ -404,9 +404,9 @@ public class PhoneNumberManager {
       String myNumber = null;
 
       try {
-         MinecraftClient mc = MinecraftClient.getInstance();
+         Minecraft mc = Minecraft.getInstance();
          if (mc != null && mc.player != null) {
-            myUuid = mc.player.getUuid();
+            myUuid = mc.player.getUUID();
             myNumber = uuidToNumber.get(myUuid);
          }
       } catch (Throwable var5) {

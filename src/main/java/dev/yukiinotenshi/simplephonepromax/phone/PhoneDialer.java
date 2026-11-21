@@ -17,9 +17,9 @@ public final class PhoneDialer {
    public static boolean call(UUID target,String name) { return call(target,name,null); }
    public static boolean call(UUID target,String name,String dialed) {
       if(dev.yukiinotenshi.simplephonepromax.network.VoicemailClient.busy())return false;
-      var client=net.minecraft.client.MinecraftClient.getInstance();
-      if(target!=null&&!SimpleVoiceCallClient.callManager.isInCall()&&client.player!=null&&(!Boolean.TRUE.equals(client.getNetworkHandler()!=null&&client.getNetworkHandler().getPlayerListEntry(target)!=null)||Boolean.FALSE.equals(dev.yukiinotenshi.simplephonepromax.network.CallControlService.hasPhone(target)))){
-         client.setScreen(new dev.yukiinotenshi.simplephonepromax.gui.DialAttemptScreen(name,target,"offline"));return false;
+      var client=net.minecraft.client.Minecraft.getInstance();
+      if(target!=null&&!SimpleVoiceCallClient.callManager.isInCall()&&client.player!=null&&(!Boolean.TRUE.equals(client.getConnection()!=null&&client.getConnection().getPlayerInfo(target)!=null)||Boolean.FALSE.equals(dev.yukiinotenshi.simplephonepromax.network.CallControlService.hasPhone(target)))){
+         client.setScreenAndShow(new dev.yukiinotenshi.simplephonepromax.gui.DialAttemptScreen(name,target,"offline"));return false;
       }
       if(target!=null){DIALED.remove(target);if(dialed!=null&&!dialed.isBlank())DIALED.put(target,PhoneNumberManager.onlyDigits(dialed));}
       if(!SimpleVoiceCallClient.callManager.startOutgoingCall(name,target))return false;

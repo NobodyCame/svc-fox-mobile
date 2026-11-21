@@ -3,10 +3,10 @@ package dev.yukiinotenshi.simplephonepromax.sound;
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import dev.yukiinotenshi.simplephonepromax.VoicechatPluginImpl;
 import dev.yukiinotenshi.simplephonepromax.network.EncryptedCalls;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.OggAudioStream;
-import net.minecraft.util.Identifier;
 import javax.sound.sampled.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.sounds.JOrbisAudioStream;
+import net.minecraft.resources.Identifier;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.*;
@@ -36,7 +36,7 @@ public final class RingtoneVoiceInjector {
             try {
                 Decoded decoded = customFile != null ? decodeFile(customFile) : decodeResource(ringtone);
                 short[] converted = toMono48k(decoded, gain);
-                MinecraftClient.getInstance().execute(() -> {
+                Minecraft.getInstance().execute(() -> {
                     synchronized (RingtoneVoiceInjector.class) {
                         if (active && token == generation) { pcm = converted; cursor = 0; }
                     }
@@ -89,9 +89,9 @@ public final class RingtoneVoiceInjector {
     private static Decoded decodeResource(String name) throws Exception {
         String safe = name == null || !name.matches("[a-z0-9_-]+") ? "ring_nokia" : name;
         if (!safe.startsWith("ring_")) safe = "ring_" + safe;
-        var id = Identifier.of(SimpleVoiceCallClient.RESOURCE_ID, "sounds/" + safe + ".ogg");
-        try (InputStream input = MinecraftClient.getInstance().getResourceManager().getResource(id).orElseThrow().getInputStream();
-             OggAudioStream ogg = new OggAudioStream(input); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+        var id = Identifier.fromNamespaceAndPath(SimpleVoiceCallClient.RESOURCE_ID, "sounds/" + safe + ".ogg");
+        try (InputStream input = Minecraft.getInstance().getResourceManager().getResource(id).orElseThrow().open();
+             JOrbisAudioStream ogg = new JOrbisAudioStream(input); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             AudioFormat format = ogg.getFormat();
             int limit = Math.min(MAX_PCM_BYTES, (int) (format.getFrameRate() * format.getFrameSize() * 30));
             while (out.size() < limit) {
@@ -112,7 +112,7 @@ public final class RingtoneVoiceInjector {
             var pcm = Mp3Ringtone.decode(path); return new Decoded(pcm.format(), pcm.bytes());
         }
         if (lower.endsWith(".ogg")) {
-            try (InputStream input = Files.newInputStream(path); OggAudioStream ogg = new OggAudioStream(input);
+            try (InputStream input = Files.newInputStream(path); JOrbisAudioStream ogg = new JOrbisAudioStream(input);
                  ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 AudioFormat format = ogg.getFormat();
                 int limit = Math.min(MAX_PCM_BYTES, (int) (format.getFrameRate() * format.getFrameSize() * 30));

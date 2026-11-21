@@ -50,6 +50,7 @@ public class ModConfig {
    public boolean legacyNumberMode = false;
    public String callStandard = "fox";
    public String backendBaseUrl = DEFAULT_BACKEND_URL;
+   public boolean backendHostnameMigrated = false;
    public String callControlSecret = "";
    public String backendDeviceId = "";
    public String backendAdminToken = "";
@@ -110,8 +111,15 @@ public class ModConfig {
                this.legacyNumberMode = loaded.legacyNumberMode;
                this.callStandard = "legacy".equals(loaded.callStandard) || "yoghurt".equals(loaded.callStandard) ? "legacy" : "fox";
                String previousBackendUrl=loaded.backendBaseUrl;
-               this.backendBaseUrl = dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.upgrade(previousBackendUrl != null && !previousBackendUrl.isBlank() ? previousBackendUrl : DEFAULT_BACKEND_URL);
-               backendAddressMigrated=!java.util.Objects.equals(previousBackendUrl,this.backendBaseUrl);
+               if (!loaded.backendHostnameMigrated) {
+                  this.backendBaseUrl = dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.migrateLegacyHostOnce(
+                     previousBackendUrl != null && !previousBackendUrl.isBlank() ? previousBackendUrl : DEFAULT_BACKEND_URL);
+                  this.backendHostnameMigrated = true;
+                  backendAddressMigrated = true;
+               } else {
+                  this.backendBaseUrl = dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.upgrade(
+                     previousBackendUrl != null && !previousBackendUrl.isBlank() ? previousBackendUrl : DEFAULT_BACKEND_URL);
+               }
                this.callControlSecret = loaded.callControlSecret != null ? loaded.callControlSecret : "";
                this.backendDeviceId = loaded.backendDeviceId != null ? loaded.backendDeviceId : "";
                this.backendAdminToken = loaded.backendAdminToken != null ? loaded.backendAdminToken : "";
@@ -135,6 +143,7 @@ public class ModConfig {
          }
       } else {
          this.passwordProtectedCallsInitialized = true;
+         this.backendHostnameMigrated = true;
          this.save();
       }
       // Save after closing the reader; Windows will not allow truncating the open config file.

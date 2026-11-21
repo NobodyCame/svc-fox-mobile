@@ -1,10 +1,10 @@
 package dev.yukiinotenshi.simplephonepromax.sound;
 
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class WallpaperEngine {
-   public static void render(DrawContext ctx, int screenWidth, int screenHeight) {
+   public static void render(GuiGraphicsExtractor ctx, int screenWidth, int screenHeight) {
       if (ctx != null) {
          String wp = SimpleVoiceCallClient.config.wallpaper;
          if (wp == null) {
@@ -176,11 +176,11 @@ public class WallpaperEngine {
       }
    }
 
-   private static void drawSolid(DrawContext ctx, int w, int h, int argb) {
+   private static void drawSolid(GuiGraphicsExtractor ctx, int w, int h, int argb) {
       ctx.fill(0, 0, w, h, argb);
    }
 
-   private static void drawGradient(DrawContext ctx, int w, int h, int c0, int c1, int c2, int c3) {
+   private static void drawGradient(GuiGraphicsExtractor ctx, int w, int h, int c0, int c1, int c2, int c3) {
       int steps = 22;
       int[] cols = new int[]{c0, c1, c2, c3};
 
