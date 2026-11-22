@@ -64,17 +64,14 @@ public class IncomingCallScreen extends Screen {
       this.addTexturedButton(declineButton);
       Button blockButton = Button.builder(Component.translatable("phone.call.block"), b -> {
          UUID otherUuid = SimpleVoiceCallClient.callManager.getOtherPlayerUuid();
-         String otherName = SimpleVoiceCallClient.callManager.getOtherPlayerName();
-         if (otherUuid != null) {
-            SimpleVoiceCallClient.config.addBlocked(otherUuid, otherName);
-            ModNetworking.sendCallBlocked(otherUuid);
-         } else if (otherName != null) {
-            SimpleVoiceCallClient.config.addBlocked(otherName);
-         }
+         if (otherUuid == null) return;
+         SimpleVoiceCallClient.config.addBlocked(otherUuid, null);
+         ModNetworking.sendCallBlocked(otherUuid);
 
          SimpleVoiceCallClient.callManager.declineCall();
          this.onClose();
       }).size(buttonWidth, buttonHeight).pos(buttonX, buttonY + 2 * (buttonHeight + gap)).build();
+      blockButton.active = SimpleVoiceCallClient.callManager.getOtherPlayerUuid() != null;
       this.addTexturedButton(blockButton);
    }
 
