@@ -294,7 +294,7 @@ public final class CallControlService {
          HttpRequest request=HttpRequest.newBuilder(URI.create(base+"/calls/"+action))
             .timeout(Duration.ofSeconds(5)).header("Content-Type","application/json")
             .POST(HttpRequest.BodyPublishers.ofString(JSON.toJson(body))).build();
-         CompletableFuture<JsonObject> next=tail.handle((v,e)->null).thenCompose(v->dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.client(request.uri()).sendAsync(request,HttpResponse.BodyHandlers.ofString()))
+         CompletableFuture<JsonObject> next=tail.handle((v,e)->null).thenCompose(v->dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.sendAsync(request))
             .thenApply(response->{if(response.statusCode()!=200){
                String detail=response.body()==null?"":response.body().trim();
                try {

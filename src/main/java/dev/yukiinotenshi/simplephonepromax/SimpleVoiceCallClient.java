@@ -65,6 +65,7 @@ public class SimpleVoiceCallClient implements ClientModInitializer {
       PhoneNumberManager.load();
       BackendNumberService.load();
       ModNetworking.register();
+      dev.yukiinotenshi.simplephonepromax.network.LocalOperatorClient.register();
       ClientTickEvents.END_CLIENT_TICK.register((EndTick)client -> {
          callManager.tick();
          soundManager.tick();
