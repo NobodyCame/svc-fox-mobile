@@ -267,6 +267,6 @@
   "phone.ringtone.iphone": "iPhone",
   "phone.ringtone.blackberry": "Blackberry",
   "phone.ringtone.atomic": "Atomic Bell",
-  "phone.ringtone.samsung": "Samsung"
+  "phone.ringtone.samsung": "Samsung",
+  "phone.organization.incoming_line": "Линия +%s · %s"
 }
-

@@ -109,6 +109,11 @@ public class IncomingCallScreen extends Screen {
             }
          }
 
+         Component line = dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.incomingLineLabel();
+         if (line != null) {
+            PhoneGuiTextures.drawCenteredTrimmedText(drawContext, this.font, line, centerX,
+               frame.y() + frame.px(51), frame.px(160), 0xFFB8E4FF);
+         }
          String callerName = SimpleVoiceCallClient.callManager.getOtherPlayerName();
          if (callerName != null) {
             Component nameComponent = Component.literal(callerName);

@@ -34,10 +34,12 @@ public final class IncomingCallHud {
             return;
          }
 
+         var line = dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.incomingLineLabel();
+         String label = line == null ? SimpleVoiceCallClient.callManager.getOtherPlayerName() : line.getString();
          PhoneGuiTextures.drawIncomingToast(
             context,
             client.font,
-            SimpleVoiceCallClient.callManager.getOtherPlayerName(),
+            label,
             SimpleVoiceCallClient.callManager.getRingingStartedAtMs()
          );
       } catch (Throwable ignored) {

@@ -44,6 +44,10 @@ public final class VoiceCallTransport {
    private VoiceCallTransport() {
    }
 
+   static UUID getIncomingGroup() {
+      return incomingGroup;
+   }
+
    public static boolean startCall(UUID target) {
       if (target != null && VoicechatPluginImpl.isReady()) {
          leaveGroup();
@@ -456,6 +460,9 @@ public final class VoiceCallTransport {
          }
 
          SimpleVoiceCallClient.callManager.startIncomingCall(name, callerUuid);
+         if (SimpleVoiceCallClient.callManager.getState() == CallState.INCOMING_RINGING) {
+            OrganizationCalls.findIncomingLine(callerUuid, incomingGroup);
+         }
       }
    }
 

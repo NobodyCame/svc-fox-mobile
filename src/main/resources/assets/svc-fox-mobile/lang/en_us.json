@@ -257,6 +257,6 @@
   "phone.hold.limit": "Hold lasts up to 5 minutes; returning requires a connection.",
   "phone.standard.busy": "End active and held calls before changing operator.",
   "phone.standard.applied_info": "Operator changes immediately, without restarting the game.",
-  "phone.standard.short_fox": "Short codes require the Fox Mobile operator."
+  "phone.standard.short_fox": "Short codes require the Fox Mobile operator.",
+  "phone.organization.incoming_line": "Organization +%s · %s"
 }
-

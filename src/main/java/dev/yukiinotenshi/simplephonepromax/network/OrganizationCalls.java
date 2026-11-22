@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import dev.yukiinotenshi.simplephonepromax.phone.PhoneDialer;
 import java.util.UUID;
+import net.minecraft.network.chat.Component;
+import dev.yukiinotenshi.simplephonepromax.phone.ServerProfiles;
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.Minecraft;
@@ -15,6 +17,37 @@ public final class OrganizationCalls {
     private static final ArrayDeque<Long> shiftRequests = new ArrayDeque<>();
     private static String status = "", context = "", number = "";
     private static UUID currentTarget;
+    private static UUID blockedTarget;
+    private static IncomingLine incomingLine;
+    private static long incomingLookup;
+
+    private record IncomingLine(UUID caller, String server, UUID group, String number, String name) {}
+
+    public static Component incomingLineLabel() {
+        var line = incomingLine;
+        if (line == null || !line.server.equals(ServerProfiles.current())
+                || !line.caller.equals(SimpleVoiceCallClient.callManager.getOtherPlayerUuid())
+                || !line.group.equals(VoiceCallTransport.getIncomingGroup())) return null;
+        return Component.translatable("phone.organization.incoming_line", line.number, line.name);
+    }
+
+    static void findIncomingLine(UUID caller, UUID group) {
+        long lookup = ++incomingLookup;
+        incomingLine = null;
+        if (group == null || !CallControlService.available()) return;
+        String server = ServerProfiles.current();
+        JsonObject body = new JsonObject();
+        body.addProperty("caller", caller.toString());
+        var client = Minecraft.getInstance();
+        CallControlService.extension("org-incoming", body).whenComplete((value, error) -> client.execute(() -> {
+            if (error != null || lookup != incomingLookup || !server.equals(ServerProfiles.current())
+                    || !group.equals(VoiceCallTransport.getIncomingGroup())
+                    || !caller.equals(SimpleVoiceCallClient.callManager.getOtherPlayerUuid())
+                    || !value.has("number") || !value.has("name")) return;
+            incomingLine = new IncomingLine(caller, server, group, value.get("number").getAsString(),
+                    value.get("name").getAsString());
+        }));
+    }
     private static long next, generation;
 
     public static String status() { return status; }
@@ -49,6 +82,7 @@ public final class OrganizationCalls {
         if (!value.has("handled") || !value.get("handled").getAsBoolean()) {
             queued = false;
             busy = false;
+            blockedTarget = null;
             status = "Связь с очередью потеряна";
             return;
         }
@@ -60,6 +94,7 @@ public final class OrganizationCalls {
                 status = "Оператор ответил";
                 queued = false;
                 currentTarget = null;
+                blockedTarget = null;
                 number = "";
                 generation++;
                 if (Minecraft.getInstance().player != null && CallControlService.available())
@@ -67,17 +102,29 @@ public final class OrganizationCalls {
                 return;
             }
             if (target.equals(currentTarget)) return;
+            var client = Minecraft.getInstance();
             if (currentTarget != null && SimpleVoiceCallClient.callManager.getOtherPlayerUuid() != null &&
                     currentTarget.equals(SimpleVoiceCallClient.callManager.getOtherPlayerUuid())) {
                 UUID previous = currentTarget;
                 SimpleVoiceCallClient.callManager.endCall();
-                var client = Minecraft.getInstance();
                 if (client.player != null) ModNetworking.sendCallHangup(client.player.getUUID(), previous);
             }
+            currentTarget = null;
+            var state = VoiceCallTransport.findState(target);
+            var info = client.getConnection() == null ? null : client.getConnection().getPlayerInfo(target);
+            String voiceName = state == null ? null : state.getName();
+            String playerName = info == null ? null : info.getProfile().name();
+            var config = SimpleVoiceCallClient.config;
+            if (config.isBlocked(target) || config.isBlocked(voiceName) || config.isBlocked(playerName)) {
+                blockedTarget = target;
+                status = "Пропускаем заблокированного оператора";
+                return;
+            }
+            blockedTarget = null;
             currentTarget = target;
-            String name = value.get("name").getAsString();
-            if (PhoneDialer.call(target, name)) {
-                status = "Соединяем с оператором";
+            String callerLabel = voiceName != null && !voiceName.isBlank() ? voiceName : playerName;
+            if (PhoneDialer.call(target, callerLabel == null ? target.toString() : callerLabel)) {
+                status = "Соединяем с оператором · " + value.get("name").getAsString();
                 Minecraft.getInstance().setScreenAndShow(new dev.yukiinotenshi.simplephonepromax.gui.ActiveCallScreen());
             } else {
                 status = "Вызываем оператора · если он не ответит, вызов перейдёт дальше";
@@ -92,6 +139,7 @@ public final class OrganizationCalls {
                 if (client.player != null) ModNetworking.sendCallHangup(client.player.getUUID(), previous);
             }
             currentTarget = null;
+            blockedTarget = null;
         }
     }
 
@@ -112,7 +160,9 @@ public final class OrganizationCalls {
             busy = true;
             next = now + 1000;
             long epoch = generation;
-            CallControlService.extension("org-status", new JsonObject()).whenComplete((value, error) ->
+            JsonObject body = new JsonObject();
+            if (blockedTarget != null) body.addProperty("skip_target", blockedTarget.toString());
+            CallControlService.extension("org-status", body).whenComplete((value, error) ->
                     client.execute(() -> {
                         if (epoch != generation) return;
                         busy = false;
@@ -132,6 +182,7 @@ public final class OrganizationCalls {
         generation++;
         number = "";
         currentTarget = null;
+        blockedTarget = null;
         if (Minecraft.getInstance().player != null && CallControlService.available()) {
             CallControlService.extension("org-cancel", new JsonObject());
         }

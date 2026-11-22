@@ -224,7 +224,8 @@ public class ActiveCallScreen extends Screen {
             titleColor = 16777130;
          } else if (state == CallState.INCOMING_RINGING) {
             title = Component.translatable("phone.call.incoming_player", new Object[]{otherName != null ? otherName : ""});
-            status = Component.translatable("phone.call.incoming_status");
+            var line = dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.incomingLineLabel();
+            status = line == null ? Component.translatable("phone.call.incoming_status") : line;
             titleColor = 5635925;
          } else if (state == CallState.ACTIVE) {
             String visibleNumber = otherUuid == null ? null : PhoneNumberManager.getDisplayNumberFor(otherUuid);
