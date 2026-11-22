@@ -51,6 +51,13 @@ public class ModConfig {
    public String callStandard = "fox";
    public String backendBaseUrl = DEFAULT_BACKEND_URL;
    public boolean backendHostnameMigrated = false;
+   public boolean backendRouteSettingsMigrated = false;
+   public boolean backendAutoFallback = true;
+   public String backendRouteMode = "AUTO";
+   public String backendPrimaryEndpoint = dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp.DEFAULT_PRIMARY;
+   public String backendFallbackEndpoint = dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp.DEFAULT_BACKUP;
+   public int backendConnectTimeoutSeconds = 5;
+   public int backendRequestTimeoutSeconds = 8;
    public String callControlSecret = "";
    public String backendDeviceId = "";
    public String backendAdminToken = "";
@@ -76,6 +83,7 @@ public class ModConfig {
 
       File configFile = new File(configDir, CONFIG_FILE_NAME);
       boolean backendAddressMigrated = false;
+      boolean backendRouteSettingsMigrated = false;
       boolean passwordSettingMigrated = false;
       if (configFile.exists()) {
          try (FileReader reader = new FileReader(configFile)) {
@@ -120,6 +128,17 @@ public class ModConfig {
                   this.backendBaseUrl = dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.upgrade(
                      previousBackendUrl != null && !previousBackendUrl.isBlank() ? previousBackendUrl : DEFAULT_BACKEND_URL);
                }
+               this.backendAutoFallback = loaded.backendAutoFallback;
+               this.backendRouteMode = loaded.backendRouteMode == null ? "AUTO" : loaded.backendRouteMode.trim().toUpperCase(Locale.ROOT);
+               if (!java.util.Set.of("AUTO", "PRIMARY", "BACKUP").contains(this.backendRouteMode)) this.backendRouteMode = "AUTO";
+               this.backendPrimaryEndpoint = dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp.validEndpoint(loaded.backendPrimaryEndpoint)
+                  ? loaded.backendPrimaryEndpoint.trim() : dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp.DEFAULT_PRIMARY;
+               this.backendFallbackEndpoint = dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp.validEndpoint(loaded.backendFallbackEndpoint)
+                  ? loaded.backendFallbackEndpoint.trim() : dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp.DEFAULT_BACKUP;
+               this.backendConnectTimeoutSeconds = Math.clamp(loaded.backendConnectTimeoutSeconds, 1, 120);
+               this.backendRequestTimeoutSeconds = Math.clamp(loaded.backendRequestTimeoutSeconds, 1, 600);
+               backendRouteSettingsMigrated = !loaded.backendRouteSettingsMigrated;
+               this.backendRouteSettingsMigrated = true;
                this.callControlSecret = loaded.callControlSecret != null ? loaded.callControlSecret : "";
                this.backendDeviceId = loaded.backendDeviceId != null ? loaded.backendDeviceId : "";
                this.backendAdminToken = loaded.backendAdminToken != null ? loaded.backendAdminToken : "";
@@ -144,10 +163,11 @@ public class ModConfig {
       } else {
          this.passwordProtectedCallsInitialized = true;
          this.backendHostnameMigrated = true;
+         this.backendRouteSettingsMigrated = true;
          this.save();
       }
       // Save after closing the reader; Windows will not allow truncating the open config file.
-      if (backendAddressMigrated || passwordSettingMigrated) this.save();
+      if (backendAddressMigrated || passwordSettingMigrated || backendRouteSettingsMigrated) this.save();
    }
 
    private void backupBrokenConfig(File configFile) {

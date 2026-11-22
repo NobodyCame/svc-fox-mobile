@@ -1,0 +1,28 @@
+plugins { id 'java' }
+
+version = rootProject.version
+base { archivesName = "fox-mobile-operator-mc${rootProject.minecraft_version}-purpur" }
+
+repositories {
+    maven { url = 'https://repo.purpurmc.org/snapshots' }
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    mavenCentral()
+}
+dependencies {
+    compileOnly 'org.purpurmc.purpur:purpur-api:26.3.build.2652-stable'
+    compileOnly 'com.google.code.gson:gson:2.13.2'
+}
+java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
+sourceSets.main.java.srcDir(rootProject.file('operator-protocol/src/main/java'))
+processResources {
+    from(rootProject.layout.buildDirectory.dir('operator-runtimes')) {
+        include '*.zip'
+        into 'fox-operator/runtime'
+    }
+    inputs.property('version', version)
+    filesMatching('plugin.yml') { expand(version: project.version) }
+    from(rootProject.file('backend')) {
+        include rootProject.operatorBackendFiles
+        into 'fox-operator'
+    }
+}

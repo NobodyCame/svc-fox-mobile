@@ -253,6 +253,7 @@ public class PhoneNumberManager {
       if (mc != null && mc.player != null) {
          String number=getDisplayNumberFor(mc.player.getUUID());
          if(isValidProMaxNumber(number))return number;
+         if(BackendNumberService.isLocalOperator())return number;
          String cached=dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.config==null?null:dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.config.backendCachedNumber;
          return isValidProMaxNumber(cached)?cached:number;
       }

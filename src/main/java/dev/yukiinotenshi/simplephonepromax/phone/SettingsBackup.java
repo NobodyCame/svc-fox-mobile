@@ -37,6 +37,45 @@ public final class SettingsBackup {
         return d;
     }
     private static String key(ModConfig.Contact c){return Objects.toString(c.server,"")+"/"+c.uuid;}
+    public static int copyContacts(Data backup, String source, String destination) {
+        if (source == null || destination == null || destination.isBlank()) return 0;
+        var config = SimpleVoiceCallClient.config;
+        var sourceContacts = backup == null ? config.contacts : backup.contacts;
+        var favorites = backup == null ? config.favoriteContacts : backup.favorites;
+        var ringtones = backup == null ? config.contactRingtones : backup.contactRingtones;
+        Set<String> known = new HashSet<>();
+        for (var contact : config.contacts) {
+            if (contact != null && destination.equals(contact.server)) {
+                known.add(Objects.toString(PhoneNumberManager.onlyDigits(contact.number), ""));
+            }
+        }
+        int copied = 0;
+        for (var original : new ArrayList<>(sourceContacts)) {
+            if (original == null || !source.equals(Objects.toString(original.server, ""))) continue;
+            String number = PhoneNumberManager.onlyDigits(original.number);
+            if (number == null || number.isBlank() || !known.add(number)) continue;
+            var copy = new ModConfig.Contact(original.name, original.number, original.uuid);
+            copy.nickname = original.nickname;
+            copy.server = destination;
+            config.contacts.add(copy);
+            String targetFavorite = destination + "/" + number;
+            if (favorites.contains(source + "/" + number) && !config.favoriteContacts.contains(targetFavorite)) {
+                config.favoriteContacts.add(targetFavorite);
+            }
+            if (original.uuid != null) {
+                var preference = ringtones.get(source + "/" + original.uuid);
+                if (preference != null) {
+                    var ringtone = new ModConfig.RingtonePreference();
+                    ringtone.ringtone = preference.ringtone;
+                    ringtone.volume = preference.volume;
+                    config.contactRingtones.putIfAbsent(destination + "/" + original.uuid, ringtone);
+                }
+            }
+            copied++;
+        }
+        if (copied > 0) config.save();
+        return copied;
+    }
     public static int additions(Data d){Set<String> known=new HashSet<>();for(var c:SimpleVoiceCallClient.config.contacts)known.add(key(c));int n=0;for(var c:d.contacts)if(known.add(key(c)))n++;return n;}
     private static float volume(float value){if(!Float.isFinite(value))throw new IllegalArgumentException("Некорректная громкость");return Math.max(0,Math.min(1,value));}
     public static void apply(Data d){

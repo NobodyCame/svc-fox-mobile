@@ -6,6 +6,11 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+ext.operatorBackendFiles = ['operator_stdio.py', 'simple_phone_backend.py', 'call_signalling.py',
+        'callback_requests.py', 'organization_lines.py', 'private_calls.py', 'secure_relay.py',
+        'voicemail.py', 'requirements.txt']
+sourceSets.main.java.srcDir('operator-protocol/src/main/java')
+
 base {
     archivesName = "${project.archives_base_name}-mc${project.minecraft_version}-fabric"
 }
@@ -43,6 +48,16 @@ dependencies {
 }
 
 processResources {
+    if (!providers.gradleProperty('foxClientOnly').isPresent() && file('backend/operator_stdio.py').isFile()) {
+        from(layout.buildDirectory.dir('operator-runtimes')) {
+            include '*.zip'
+            into 'fox-operator/runtime'
+        }
+        from('backend') {
+            include operatorBackendFiles
+            into 'fox-operator'
+        }
+    }
     inputs.property "version", project.version
     inputs.property "minecraft_version", project.minecraft_version
     inputs.property "loader_version", project.loader_version
@@ -71,6 +86,7 @@ java {
 }
 
 jar {
+    if (providers.gradleProperty('foxClientOnly').isPresent()) archiveClassifier.set('client')
     from("NOTICE.md")
     from("LICENSE") {
         rename { "${it}_${project.archives_base_name}" }
