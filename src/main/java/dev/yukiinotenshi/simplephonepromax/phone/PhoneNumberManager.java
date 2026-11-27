@@ -2,7 +2,6 @@ package dev.yukiinotenshi.simplephonepromax.phone;
 
 import com.google.gson.Gson;
 import dev.yukiinotenshi.simplephonepromax.compat.CallStandard;
-import dev.yukiinotenshi.simplephonepromax.compat.LegacyCallBridge;
 import dev.yukiinotenshi.simplephonepromax.config.ModConfig;
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import com.google.gson.GsonBuilder;
@@ -56,6 +55,7 @@ public class PhoneNumberManager {
       numberToUuid.clear();
       originalUuidToNumber.clear();
       originalNumberToUuid.clear();
+      importOriginalNumbers();
    }
 
    private static void importOriginalNumbers() {
@@ -201,7 +201,6 @@ public class PhoneNumberManager {
    }
 
    public static String getNumberFor(UUID uuid) {
-      if (CallStandard.isLegacy()) return (String)LegacyCallBridge.original("phone.PhoneNumberManager", "getNumberFor", uuid);
       if (uuid == null) {
          return null;
       }
@@ -253,6 +252,7 @@ public class PhoneNumberManager {
       if (mc != null && mc.player != null) {
          String number=getDisplayNumberFor(mc.player.getUUID());
          if(isValidProMaxNumber(number))return number;
+         if(BackendNumberService.isLocalOperator())return number;
          String cached=dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.config==null?null:dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.config.backendCachedNumber;
          return isValidProMaxNumber(cached)?cached:number;
       }
@@ -261,7 +261,6 @@ public class PhoneNumberManager {
    }
 
    public static UUID findUuidByNumber(String number) {
-      if (CallStandard.isLegacy()) return (UUID)LegacyCallBridge.original("phone.PhoneNumberManager", "findUuidByNumber", number);
       if (number == null) {
          return null;
       }
@@ -281,14 +280,16 @@ public class PhoneNumberManager {
          return fromNet;
       }
 
-      UUID fromBackend = BackendNumberService.findCachedUuidByNumber(clean);
-      if (fromBackend != null) {
-         return fromBackend;
-      }
-
       UUID imported = originalNumberToUuid.get(clean);
       if (imported != null) {
          return imported;
+      }
+
+      if (CallStandard.isLegacy()) return null;
+
+      UUID fromBackend = BackendNumberService.findCachedUuidByNumber(clean);
+      if (fromBackend != null) {
+         return fromBackend;
       }
 
       for (Entry<String, UUID> e : originalNumberToUuid.entrySet()) {
@@ -301,7 +302,6 @@ public class PhoneNumberManager {
    }
 
    public static void registerPlayer(UUID uuid, String numberOrName) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("phone.PhoneNumberManager", "registerPlayer", uuid, numberOrName); return; }
       if (uuid != null) {
          refreshLegacyNumber(uuid);
       }
@@ -314,7 +314,8 @@ public class PhoneNumberManager {
 
       String old = originalUuidToNumber.get(uuid);
       if (old != null) {
-         originalNumberToUuid.remove(old, uuid);
+         ModNetworking.registerPhoneNumber(uuid, old);
+         return old;
       }
 
       String num = computeLegacyNumber(uuid);
@@ -423,8 +424,12 @@ public class PhoneNumberManager {
       } catch (Throwable var4) {
       }
 
-      if (myUuid != null) {
+      importOriginalNumbers();
+
+      if (myUuid != null && !originalUuidToNumber.containsKey(myUuid)) {
          regenerateMyNumber();
+      } else if (myUuid != null) {
+         ModNetworking.registerPhoneNumber(myUuid, originalUuidToNumber.get(myUuid));
       }
 
       try {

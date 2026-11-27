@@ -3,28 +3,28 @@
   "id": "svc-fox-mobile",
   "version": "${version}",
   "name": "Fox Mobile",
-  "description": "Client-side phone call mod with legacy compatibility for Simple Voice Call.",
+  "description": "Fox Mobile phone client and optional local server operator.",
   "authors": [
     "YukiiNoTenshi"
   ],
   "contact": {},
   "license": "LicenseRef-Proprietary",
   "icon": "assets/svc-fox-mobile/icon.png",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
+    "main": [
+      "dev.yukiinotenshi.simplephonepromax.network.FabricLocalOperator"
+    ],
     "client": [
       "dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient"
     ],
     "voicechat": [
-      "dev.yukiinotenshi.simplephonepromax.VoicechatPluginImpl"
+      "dev.yukiinotenshi.simplephonepromax.VoicechatEntrypoint"
     ]
   },
   "mixins": [
     "svc-fox-mobile.mixins.json"
   ],
-  "suggests": {
-    "simple-voice-call": "*"
-  },
   "depends": {
     "fabricloader": ">=${minimum_loader_version}",
     "minecraft": "~${minecraft_version}",

@@ -59,12 +59,13 @@ public class SimpleVoiceCallClient implements ClientModInitializer {
       config = new ModConfig();
       config.load();
       dev.yukiinotenshi.simplephonepromax.compat.CallStandard.initialize();
-      callManager = dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy() ? new dev.yukiinotenshi.simplephonepromax.compat.LegacyCallManager() : new CallManager();
+      callManager = new CallManager();
       soundManager = new SoundManager();
       phoneDetector = new PhoneDetector();
       PhoneNumberManager.load();
       BackendNumberService.load();
       ModNetworking.register();
+      dev.yukiinotenshi.simplephonepromax.network.LocalOperatorClient.register();
       ClientTickEvents.END_CLIENT_TICK.register((EndTick)client -> {
          callManager.tick();
          soundManager.tick();

@@ -35,5 +35,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "svc-fox-mobile"
+include 'purpur-operator'
 
 

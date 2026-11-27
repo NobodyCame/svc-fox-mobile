@@ -7,12 +7,6 @@
   "client": [
     "ClientPlayerInteractionManagerMixin",
     "MinecraftScreenTrackerMixin",
-    "OriginalClientSuppressionMixin",
-    "OriginalVoicechatSuppressionMixin",
-    "OriginalPhoneSuppressionMixin",
-    "OriginalScreenReplacementMixin",
-    "OriginalSoundSuppressionMixin",
-    "OriginalMessagesMixin",
     "MicrophoneProcessorRingtoneMixin"
   ],
   "injectors": {

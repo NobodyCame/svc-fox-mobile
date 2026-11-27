@@ -189,6 +189,12 @@ public class PhoneContactsScreen extends Screen {
          }
       }).size(backW, backH).pos(frame.centerX() - backW / 2, backY).build();
       this.addTexturedButton(backBtn);
+      if (!this.addToCallMode) {
+         int importW = Math.max(44, frame.px(65));
+         this.addTexturedButton(Button.builder(Component.literal("Перенос"), b ->
+               minecraft.setScreenAndShow(new ContactMigrationScreen(this)))
+            .bounds(frame.centerX() - backW / 2 - importW - 4, backY, importW, backH).build());
+      }
    }
 
    public void tick() {

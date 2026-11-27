@@ -7,6 +7,7 @@ public final class PhoneDialer {
    private static final java.util.Map<UUID,String> DIALED=new java.util.concurrent.ConcurrentHashMap<>();
    public static String lastDialedFor(UUID id){return id==null?null:DIALED.get(id);}
    public static CompletableFuture<UUID> resolve(String number) {
+      if(dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy())return resolvePlayer(number);
       return dev.yukiinotenshi.simplephonepromax.network.OrganizationCalls.tryNumber(PhoneNumberManager.onlyDigits(number)).thenCompose(handled->handled?CompletableFuture.completedFuture(null):resolvePlayer(number));
    }
    private static CompletableFuture<UUID> resolvePlayer(String number) {
@@ -18,7 +19,9 @@ public final class PhoneDialer {
    public static boolean call(UUID target,String name,String dialed) {
       if(dev.yukiinotenshi.simplephonepromax.network.VoicemailClient.busy())return false;
       var client=net.minecraft.client.Minecraft.getInstance();
-      if(target!=null&&!SimpleVoiceCallClient.callManager.isInCall()&&client.player!=null&&(!Boolean.TRUE.equals(client.getConnection()!=null&&client.getConnection().getPlayerInfo(target)!=null)||Boolean.FALSE.equals(dev.yukiinotenshi.simplephonepromax.network.CallControlService.hasPhone(target)))){
+      boolean online=target!=null&&client.getConnection()!=null&&client.getConnection().getPlayerInfo(target)!=null;
+      boolean rejectedByOperator=!dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()&&Boolean.FALSE.equals(dev.yukiinotenshi.simplephonepromax.network.CallControlService.hasPhone(target));
+      if(target!=null&&!SimpleVoiceCallClient.callManager.isInCall()&&client.player!=null&&(!online||rejectedByOperator)){
          client.setScreenAndShow(new dev.yukiinotenshi.simplephonepromax.gui.DialAttemptScreen(name,target,"offline"));return false;
       }
       if(target!=null){DIALED.remove(target);if(dialed!=null&&!dialed.isBlank())DIALED.put(target,PhoneNumberManager.onlyDigits(dialed));}

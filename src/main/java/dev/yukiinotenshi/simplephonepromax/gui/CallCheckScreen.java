@@ -46,7 +46,7 @@ public final class CallCheckScreen extends Screen {
  private void remember(){SimpleVoiceCallClient.config.lastDialedNumbers.put(ServerProfiles.current(),number);SimpleVoiceCallClient.config.save();}
  public void tick(){if(++ticks%10==0){checkVoicemail();update();}}
  public void extractRenderState(GuiGraphicsExtractor c,int mx,int my,float d){dev.yukiinotenshi.simplephonepromax.sound.WallpaperEngine.render(c,width,height);var f=PhoneGuiTextures.layout(width,height);PhoneGuiTextures.drawUniversalBackground(c,f,mx,my);c.centeredText(font,title,f.centerX(),f.y()+12,0xFFFFFFFF);
-  String[] lines={number+" → "+name,"Голосовой чат: "+(VoicechatPluginImpl.isReady()?"подключён":"нет подключения"),"Оператор: "+(CallStandard.isLegacy()?"Legacy":CallControlService.available()?"доступен":"нет подтверждения связи"),target==null?"":("Приватный режим: "+(CallControlService.supports(target,"private_call_v1")?"поддерживается":"недоступен")),error};
+  String[] lines={number+" → "+name,"Голосовой чат: "+(VoicechatPluginImpl.isReady()?"подключён":"нет подключения"),"Набор: "+(CallStandard.isLegacy()?"Legacy через Fox Mobile":CallControlService.available()?"Fox Mobile доступен":"нет подтверждения связи"),target==null?"":("Приватный режим: "+(CallControlService.supports(target,"private_call_v1")?"поддерживается":"недоступен")),error};
   for(int i=0;i<lines.length;i++)PhoneGuiTextures.drawCenteredTrimmedText(c,font,Component.literal(lines[i]),f.centerX(),f.y()+32+i*15,f.width()-28,0xFFFFFFFF);super.extractRenderState(c,mx,my,d);
  }
  public void onClose(){minecraft.setScreenAndShow(new PhoneMainScreen());}public boolean isPauseScreen(){return false;}

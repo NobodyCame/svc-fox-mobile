@@ -1,0 +1,5 @@
+name: FoxMobileOperator
+version: '${version}'
+main: dev.yukiinotenshi.foxoperator.PurpurOperatorPlugin
+api-version: '26.3'
+description: Local Fox Mobile operator for Purpur

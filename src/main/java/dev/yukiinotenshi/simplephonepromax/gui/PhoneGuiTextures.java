@@ -59,6 +59,48 @@ final class PhoneGuiTextures {
       return new Frame(x, y, width, height, scale);
    }
 
+   static Frame dialogLayout(int screenWidth, int screenHeight, int minimumHeight) {
+      Frame original = layout(screenWidth, screenHeight);
+      int width = Math.max(1, Math.min(original.width(), screenWidth - 8));
+      int height = Math.max(1, Math.min(screenHeight - 12, Math.max(original.height(), minimumHeight)));
+      return new Frame((screenWidth - width) / 2, (screenHeight - height) / 2, width, height, original.scale());
+   }
+
+   static Frame dialerLayout(int screenWidth, int screenHeight) {
+      Frame original = layout(screenWidth, screenHeight);
+      if (original.bottom() + 23 <= screenHeight - 4 && original.x() >= 4) return original;
+      float scale = Math.min(original.scale(), Math.min((screenWidth - 8f) / BASE_WIDTH, (screenHeight - 30f) / BASE_HEIGHT));
+      int width = Math.max(1, Math.round(BASE_WIDTH * scale));
+      int height = Math.max(1, Math.round(BASE_HEIGHT * scale));
+      return new Frame((screenWidth - width) / 2, Math.max(2, (screenHeight - height - 24) / 2), width, height, scale);
+   }
+
+   static int pageSize(int top, int footer, int buttonHeight, int gap) {
+      return Math.max(0, (footer - top) / (buttonHeight + gap));
+   }
+
+   static void drawFittedRightText(GuiGraphicsExtractor graphics, Font font, String text, int right, int centerY, int maxWidth, int color) {
+      int textWidth = Math.max(1, font.width(text));
+      float scale = Math.min(1f, maxWidth / (float) textWidth);
+      var pose = graphics.pose();
+      pose.pushMatrix();
+      try {
+         pose.translate(right - textWidth * scale, centerY - 4 * scale);
+         pose.scale(scale, scale);
+         drawText(graphics, font, text, 0, 0, color, false);
+      } finally {
+         pose.popMatrix();
+      }
+   }
+
+   static void drawWrappedLines(GuiGraphicsExtractor graphics, Font font, Component text,
+                                int x, int y, int width, int maxLines, int color) {
+      var lines = font.split(text, Math.max(1, width));
+      for (int i = 0; i < Math.min(maxLines, lines.size()); i++) {
+         graphics.text(font, lines.get(i), x, y + i * font.lineHeight, color, false);
+      }
+   }
+
    static void drawPhone(GuiGraphicsExtractor context, Frame frame, int mouseX, int mouseY) {
       drawPanel(context, MAIN_PHONE, frame);
       drawFoxMascot(context, frame, mouseX, mouseY);
@@ -156,8 +198,8 @@ final class PhoneGuiTextures {
    }
 
    static void drawIncomingPopup(GuiGraphicsExtractor context, Frame frame, int yOffset) {
-      int width = frame.px(236);
-      int height = frame.px(34);
+      int width = Math.min(frame.width(), context.guiWidth() - 4);
+      int height = Math.max(1, Math.round(width * (34f / 236)));
       int x = frame.centerX() - width / 2;
       int y = frame.y() + frame.px(yOffset);
       context.blit(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, width, height, 236, 34, 236, 34);
@@ -166,24 +208,26 @@ final class PhoneGuiTextures {
    static void drawIncomingToast(GuiGraphicsExtractor context, Font textRenderer, String callerName, long ringingStartedAtMs) {drawToast(context,textRenderer,"Входящий вызов",callerName,ringingStartedAtMs);}
    static void drawToast(GuiGraphicsExtractor context,Font textRenderer,String heading,String callerName,long ringingStartedAtMs) {
       int screenW = context.guiWidth();
-      int popupW = 236;
+      int popupW = Math.max(1, Math.min(236, screenW - 16));
       int popupH = 34;
       long now = System.currentTimeMillis();
       long elapsed = ringingStartedAtMs > 0L ? Math.max(0L, now - ringingStartedAtMs) : 0L;
       float t = Math.min(1.0F, elapsed / 420.0F);
-      float overshoot = t < 0.72F ? t / 0.72F * 1.08F : 1.08F - (t - 0.72F) / 0.28F * 0.08F;
-      int x = screenW - 8 - Math.round(popupW * overshoot);
+      int x = screenW - 8 - Math.round(popupW * (1 - (1 - t) * (1 - t)));
       int y = 10;
       context.nextStratum();
-      context.blit(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, popupW, popupH, popupW, popupH, popupW, popupH);
+      context.blit(RenderPipelines.GUI_TEXTURED, POPUP_BACKGROUND, x, y, 0.0F, 0.0F, popupW, popupH, 236, 34, 236, 34);
       int frame = (int)((now / 220L) % 4L);
       int notesX = x + popupW - 31;
       int notesY = y + 7;
-      drawPixelNote(context, notesX, notesY + (frame == 1 ? 1 : 0), 1, 0xFFFFFF80);
-      drawPixelNote(context, notesX + 10, notesY + 9 + (frame == 3 ? -1 : 0), 1, 0xFFE8E8E8);
+      if (popupW >= 128) {
+         drawPixelNote(context, notesX, notesY + (frame == 1 ? 1 : 0), 1, 0xFFFFFF80);
+         drawPixelNote(context, notesX + 10, notesY + 9 + (frame == 3 ? -1 : 0), 1, 0xFFE8E8E8);
+      }
 
-      drawTrimmedText(context, textRenderer, heading, x + 14, y + 6, popupW - 60, 0xFFFFE070, true);
-      drawTrimmedText(context, textRenderer, callerName != null ? callerName : "", x + 14, y + 18, popupW - 60, -1, true);
+      int textWidth = Math.max(1, popupW - (popupW >= 128 ? 60 : 22));
+      drawTrimmedText(context, textRenderer, heading, x + 14, y + 6, textWidth, 0xFFFFE070, true);
+      drawTrimmedText(context, textRenderer, callerName != null ? callerName : "", x + 14, y + 18, textWidth, -1, true);
    }
 
    private static void drawPixelNote(GuiGraphicsExtractor context, int x, int y, int scale, int color) {

@@ -74,6 +74,13 @@ public class PhoneBackendSettingsScreen extends Screen {
          this.saveFields(true);
       }).size(buttonW, buttonH).pos(rightX, rowY + buttonH + buttonGap).build());
 
+      int routeButtonHeight = Math.max(10, frame.px(8));
+      int routeButtonY = Math.min(rowY + 2 * (buttonH + buttonGap), this.height - buttonH - 4 - routeButtonHeight - 2);
+      this.addRenderableWidget(Button.builder(Component.literal("Маршруты подключения"), b -> {
+         this.saveFields(false);
+         if (this.minecraft != null) this.minecraft.setScreenAndShow(new BackendRouteSettingsScreen(this));
+      }).size(w, routeButtonHeight).pos(x, routeButtonY).build());
+
       this.addRenderableWidget(Button.builder(Component.translatable("phone.settings.back"), b -> {
          this.saveFields(true);
       }).size(frame.px(92), buttonH).pos(frame.centerX() - frame.px(46), Math.min(this.height - buttonH - 4, frame.bottom() + frame.px(3))).build());

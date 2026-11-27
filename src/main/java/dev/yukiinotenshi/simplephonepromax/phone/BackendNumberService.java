@@ -42,6 +42,22 @@ public final class BackendNumberService {
    private static volatile String publicDirectoryServer = "";
    private static volatile boolean requestInFlight;
    private static volatile boolean publicDirectoryInFlight;
+   private static volatile boolean localOperator;
+
+   public static boolean isLocalOperator() { return localOperator; }
+
+   public static void useLocalOperator(boolean local) {
+      if (localOperator == local) return;
+      localOperator = local;
+      UUID_TO_ENTRY.clear();
+      NUMBER_TO_UUID.clear();
+      SHORT_TO_TARGET.clear();
+      PUBLIC_NUMBERS.clear();
+      publicDirectoryServer = "";
+      lastRegisterMs = 0;
+      lastPublicDirectoryMs = 0;
+      if (!local) load();
+   }
 
    private BackendNumberService() {
    }
@@ -81,6 +97,7 @@ public final class BackendNumberService {
    }
 
    private static void save() {
+      if (localOperator) return;
       try {
          File file = getCacheFile();
          File parent = file.getParentFile();
@@ -134,7 +151,7 @@ public final class BackendNumberService {
 
    public static void refreshPublicDirectoryAsync(Minecraft client) {
       if (!isEnabled() || client == null || client.player == null) return;
-      String server = currentServerAddress(client).trim().toLowerCase(java.util.Locale.ROOT);
+      String server = ServerProfiles.current();
       if (server.isEmpty()) return;
       long now = System.currentTimeMillis();
       if (!server.equals(publicDirectoryServer)) {
@@ -152,7 +169,7 @@ public final class BackendNumberService {
          publicDirectoryInFlight = true;
          lastPublicDirectoryMs = now;
       }
-      String encoded = URLEncoder.encode(server, StandardCharsets.UTF_8);
+      String encoded = URLEncoder.encode(currentServerAddress(client).trim().toLowerCase(java.util.Locale.ROOT), StandardCharsets.UTF_8);
       HttpRequest request;
       try {
          request = HttpRequest.newBuilder(endpoint("/public-numbers?server_address=" + encoded))
@@ -161,8 +178,7 @@ public final class BackendNumberService {
          publicDirectoryInFlight = false;
          return;
       }
-      dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.client(request.uri())
-         .sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+      dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.sendAsync(request)
          .whenComplete((response, error) -> {
             publicDirectoryInFlight = false;
             if (!server.equals(publicDirectoryServer)) {
@@ -238,7 +254,7 @@ public final class BackendNumberService {
          return CompletableFuture.completedFuture(null);
       }
 
-      return dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.client(request.uri()).sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(response -> {
+      return dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.sendAsync(request).thenApply(response -> {
          if(response.statusCode()==404)return null;
          if (response.statusCode() < 200 || response.statusCode() >= 300) {
             if(fresh)throw new IllegalStateException("Number lookup HTTP "+response.statusCode());
@@ -300,7 +316,7 @@ public final class BackendNumberService {
          return;
       }
 
-      dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.client(request.uri()).sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).whenComplete((response, error) -> {
+      dev.yukiinotenshi.simplephonepromax.network.OperatorHttp.sendAsync(request).whenComplete((response, error) -> {
          requestInFlight = false;
          if (error != null || response == null || response.statusCode() < 200 || response.statusCode() >= 300) {
             setStatus("offline");
@@ -311,7 +327,7 @@ public final class BackendNumberService {
             JsonObject root = GSON.fromJson(response.body(), JsonObject.class);
             Entry entry = entryFromJson(root);
             registerCachedEntry(entry);
-            if (entry != null && entry.backendNumber != null) {
+            if (!localOperator && entry != null && entry.backendNumber != null) {
                SimpleVoiceCallClient.config.backendCachedNumber = entry.backendNumber;
             }
             setStatus("online");

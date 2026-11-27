@@ -26,7 +26,8 @@ public final class DialAttemptScreen extends Screen {
   if(!announced){
    if(OrganizationCalls.queued()){closed=true;active=false;CallAnnouncement.stop();minecraft.setScreenAndShow(new OrganizationScreen());return;}
    if(cue==null){boolean online=minecraft.getConnection()!=null&&minecraft.getConnection().getPlayerInfo(target)!=null;
-    if(!online||Boolean.FALSE.equals(CallControlService.hasPhone(target)))cue="offline";
+    boolean rejectedByOperator=!dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()&&Boolean.FALSE.equals(CallControlService.hasPhone(target));
+    if(!online||rejectedByOperator)cue="offline";
     else {closed=true;active=false;CallAnnouncement.stop();if(PhoneDialer.call(target,number,number))minecraft.setScreenAndShow(new ActiveCallScreen());else minecraft.setScreenAndShow(new PhoneMainScreen());return;}
    }
    announced=true;status=switch(cue){case "invalid_number"->"Номер не найден";case "offline"->"Абонент вне сети";case "ended"->"Разговор завершён";default->"Нет ответа";};CallAnnouncement.play(cue);

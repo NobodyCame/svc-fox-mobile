@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient;
 import dev.yukiinotenshi.simplephonepromax.VoicechatPluginImpl;
 import dev.yukiinotenshi.simplephonepromax.network.CallControlService;
+import dev.yukiinotenshi.simplephonepromax.network.BackendRouteHttp;
 import dev.yukiinotenshi.simplephonepromax.network.OperatorHttp;
 import dev.yukiinotenshi.simplephonepromax.network.VoicemailClient;
 import java.net.URI;
@@ -25,6 +26,7 @@ public final class ConnectionDiagnosticsScreen extends Screen {
  private final List<Button> buttons=new ArrayList<>();
  private String result="Нажмите «Проверить связь»";
  private volatile String healthFailure="",sessionFailure="";
+ private volatile String operatorRoute="Оператор";
  private int healthCode=-1,foxPeers=-1;
  private boolean sessionOk,dndSynced,voicemailEncrypted,checking;
 
@@ -39,11 +41,14 @@ public final class ConnectionDiagnosticsScreen extends Screen {
 
  private void check(){
   if(checking||minecraft==null||minecraft.player==null)return;
-  checking=true;result="Проверяю оператора и игровой клиент…";healthCode=-1;foxPeers=-1;sessionOk=false;dndSynced=false;voicemailEncrypted=false;healthFailure=sessionFailure="";rebuildWidgets();
+  checking=true;result="Проверяю оператора и игровой клиент…";healthCode=-1;foxPeers=-1;sessionOk=false;dndSynced=false;voicemailEncrypted=false;healthFailure=sessionFailure="";operatorRoute="Оператор";rebuildWidgets();
   try{
    URI uri=URI.create(SimpleVoiceCallClient.config.backendBaseUrl.replaceAll("/+$","")+"/health");
    HttpRequest request=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(8)).GET().build();
-   CompletableFuture<Integer> health=OperatorHttp.client(uri).sendAsync(request,HttpResponse.BodyHandlers.discarding()).thenApply(HttpResponse::statusCode).exceptionally(error->{healthFailure=errorText(error);return -1;});
+   CompletableFuture<Integer> health=OperatorHttp.sendAsync(request).thenApply(response->{
+    operatorRoute=response.route()==BackendRouteHttp.Route.LOCAL?"Локальный оператор":"HTTPS";
+    return response.statusCode();
+   }).exceptionally(error->{healthFailure=errorText(error);return -1;});
    CompletableFuture<JsonObject> control=CallControlService.diagnosticSnapshot().whenComplete((value,error)->{if(error!=null)sessionFailure=errorText(error);});
    CompletableFuture<JsonObject> mailbox=control.thenCompose(snapshot->CallControlService.extension("vm-list",new JsonObject())).exceptionally(error->null);
    health.thenCombine(control.handle((v,e)->e==null?v:null).thenCombine(mailbox,(snapshot,list)->new JsonObject[]{snapshot,list}),
@@ -75,9 +80,9 @@ public final class ConnectionDiagnosticsScreen extends Screen {
   int y=f.y()+f.px(64),step=f.px(11),lineW=f.width()-f.px(20);
   PhoneGuiTextures.drawCenteredTrimmedText(context,font,Component.literal(result),f.centerX(),y,lineW,0xFFFFFF55);
   y+=step;
-  PhoneGuiTextures.drawCenteredTrimmedText(context,font,Component.literal("HTTPS: "+(healthCode<0?"—":healthCode==200?"OK":"HTTP "+healthCode)+" · сессия: "+yes(sessionOk)),f.centerX(),y,lineW,healthCode==200&&sessionOk?0xFF80FF80:0xFFFFD050);
+  PhoneGuiTextures.drawCenteredTrimmedText(context,font,Component.literal(operatorRoute+": "+(healthCode<0?"—":healthCode==200?"OK":"код "+healthCode)+" · сессия: "+yes(sessionOk)),f.centerX(),y,lineW,healthCode==200&&sessionOk?0xFF80FF80:0xFFFFD050);
   if(!healthFailure.isBlank()||!sessionFailure.isBlank()){
-   y+=step;String problem=!sessionFailure.isBlank()?"Сессия: "+sessionFailure:"HTTPS: "+healthFailure;
+   y+=step;String problem=!sessionFailure.isBlank()?"Сессия: "+sessionFailure:operatorRoute+": "+healthFailure;
    PhoneGuiTextures.drawCenteredTrimmedText(context,font,Component.literal(problem),f.centerX(),y,lineW,0xFFFFD050);
   }
   y+=step;

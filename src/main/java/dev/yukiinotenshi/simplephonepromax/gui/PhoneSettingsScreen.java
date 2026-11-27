@@ -69,7 +69,7 @@ public class PhoneSettingsScreen extends Screen {
     if(SimpleVoiceCallClient.callManager.isInActiveCall())button("Управление группой",()->minecraft.setScreenAndShow(new GroupParticipantsScreen()));
    }
    case "Оператор и данные" -> {
-    button("Оператор: "+dev.yukiinotenshi.simplephonepromax.compat.CallStandard.label(config().callStandard),()->minecraft.setScreenAndShow(new PhoneCallStandardScreen(this)),!callBusy());
+    button("Набор номера: "+dev.yukiinotenshi.simplephonepromax.compat.CallStandard.label(config().callStandard),()->minecraft.setScreenAndShow(new PhoneCallStandardScreen(this)),!callBusy());
     button("Показывать мой номер всем: "+on(config().showOwnNumberInDirectory),()->{config().showOwnNumberInDirectory=!config().showOwnNumberInDirectory;save();BackendNumberService.registerSelfAsync(minecraft);},BackendNumberService.isEnabled());
     button("Мой номер: "+PhoneNumberManager.formatNumber(PhoneNumberManager.getMyDisplayNumber()),()->minecraft.keyboardHandler.setClipboard(PhoneNumberManager.getMyDisplayNumber()));
     button("Настройки оператора",()->minecraft.setScreenAndShow(new PhoneBackendSettingsScreen(this)));

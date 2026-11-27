@@ -1,0 +1,2 @@
+# auto uses the bundled runtime. An absolute executable path can override it.
+python: auto

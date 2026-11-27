@@ -216,14 +216,11 @@
   "phone.group.remove_sent": "Removal command sent to participant.",
   "phone.group.removed": "Participant removed. Your call continues.",
   "phone.group.you_removed": "The group creator removed you from the call.",
-  "phone.standard.title": "Operator",
-  "phone.standard.setting": "Operator: %s",
-  "phone.standard.active": "Running: %s",
-  "phone.standard.fox_info": "Fox Mobile service, ordinary calls compatible with Simple Voice Call, and support for advanced features.",
-  "phone.standard.legacy_info": "Calls use the installed Simple Voice Call mod. Fox Mobile interface; no service features.",
-  "phone.standard.original_required": "Install a compatible Simple Voice Call mod in the mods folder. A .disabled file is not loaded.",
-  "phone.standard.restart": "Saved. Restart Minecraft to change the calling standard.",
-  "phone.standard.restart_info": "Changing the standard requires a Minecraft restart.",
+  "phone.standard.title": "Wybór numeru",
+  "phone.standard.setting": "Źródło numeru: %s",
+  "phone.standard.active": "Wybrano: %s",
+  "phone.standard.fox_info": "Połączenia zawsze obsługuje Fox Mobile. Ten tryb rozpoznaje aktualne numery i krótkie kody organizacji.",
+  "phone.standard.legacy_info": "Używaj lokalnych, starszych numerów Legacy, także bez połączenia z operatorem. Samo połączenie nadal obsługuje Fox Mobile.",
   "phone.group.invite_sent": "Invitation sent. Your current call continues.",
   "phone.group.invite_incoming": "Group call invitation",
   "phone.hold.answer": "Hold current call and answer",
@@ -232,8 +229,9 @@
   "phone.hold.release": "Release held call",
   "phone.hold.compatibility": "All current call participants must advertise hold support through the service.",
   "phone.hold.limit": "Hold lasts up to 5 minutes; returning requires a connection.",
-  "phone.standard.busy": "End active and held calls before changing operator.",
-  "phone.standard.applied_info": "Operator changes immediately, without restarting the game.",
-  "phone.standard.short_fox": "Short codes require the Fox Mobile operator."
+  "phone.standard.busy": "Zakończ bieżące połączenie przed zmianą źródła numerów.",
+  "phone.standard.applied_info": "Oba źródła numerów korzystają z połączeń Fox Mobile.",
+  "phone.standard.short_fox": "Krótkie kody organizacji wymagają trybu numerów Fox Mobile i dostępnego operatora.",
+  "phone.standard.fox_label": "Numery Fox Mobile",
+  "phone.standard.legacy_label": "Starsze numery Legacy"
 }
-

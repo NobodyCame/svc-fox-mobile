@@ -1,8 +1,6 @@
 package dev.yukiinotenshi.simplephonepromax.network;
 
 import dev.yukiinotenshi.simplephonepromax.VoicechatPluginImpl;
-import dev.yukiinotenshi.simplephonepromax.compat.CallStandard;
-import dev.yukiinotenshi.simplephonepromax.compat.LegacyCallBridge;
 import dev.yukiinotenshi.simplephonepromax.phone.PhoneNumberManager;
 import de.maxhenkel.voicechat.voice.common.PlayerState;
 import java.util.Set;
@@ -19,7 +17,6 @@ public class ModNetworking {
    }
 
    public static void tick() {
-      if (CallStandard.isLegacy()) return; // Original ticks are driven by LegacyCallManager.
       if (++tickCounter % 20 == 0) {
          broadcastIdentify();
       }
@@ -86,7 +83,6 @@ public class ModNetworking {
    }
 
    public static void sendCallRequest(UUID targetUuid, String targetName) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("network.ModNetworking", "sendCallRequest", targetUuid, targetName); return; }
       if (!VoiceCallTransport.startCall(targetUuid)) {
          dev.yukiinotenshi.simplephonepromax.SimpleVoiceCallClient.callManager.endCall();
          dev.yukiinotenshi.simplephonepromax.sound.OperatorSounds.unavailable();
@@ -94,31 +90,25 @@ public class ModNetworking {
    }
 
    public static void sendCallAccept(UUID callerUuid, UUID targetUuid) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("network.ModNetworking", "sendCallAccept", callerUuid, targetUuid); return; }
       VoiceCallTransport.acceptIncoming();
    }
 
    public static void sendCallDecline(UUID callerUuid, UUID targetUuid) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("network.ModNetworking", "sendCallDecline", callerUuid, targetUuid); return; }
       VoiceCallTransport.decline(targetUuid);
    }
 
    public static void sendCallBlocked(UUID callerUuid) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("network.ModNetworking", "sendCallDecline", callerUuid, callerUuid); return; }
       VoiceCallTransport.block(callerUuid);
    }
 
    public static void sendCallHangup(UUID callerUuid, UUID targetUuid) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("network.ModNetworking", "sendCallHangup", callerUuid, targetUuid); return; }
       VoiceCallTransport.leaveGroup();
    }
 
    public static void sendGroupInvite(UUID targetUuid, String groupId) {
-      if (CallStandard.isLegacy()) { LegacyCallBridge.original("network.ModNetworking", "sendGroupInvite", targetUuid, groupId); return; }
    }
 
    public static void onVoicechatDisconnected() {
-      if (CallStandard.isLegacy()) { net.minecraft.client.Minecraft.getInstance().execute(LegacyCallBridge::disconnect); return; }
       net.minecraft.client.Minecraft.getInstance().execute(CallControlService::reset);
       VoiceCallTransport.onDisconnected();
    }

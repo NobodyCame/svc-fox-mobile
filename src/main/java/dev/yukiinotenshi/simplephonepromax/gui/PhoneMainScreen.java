@@ -147,16 +147,17 @@ public class PhoneMainScreen extends Screen {
       }
 
       this.texturedButtons.clear();
-      PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
+      PhoneGuiTextures.Frame frame = PhoneGuiTextures.dialerLayout(this.width, this.height);
       int extraY=Math.min(this.height-23,frame.bottom()+6), extraW=(frame.width()-8)/3;
-      this.addRenderableWidget(Button.builder(Component.literal("Приватный звонок"),b->this.minecraft.setScreenAndShow(new PrivateCallScreen())).bounds(frame.x(),extraY,extraW,20).build()).active=!dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy();
+      this.addRenderableWidget(Button.builder(Component.literal("Приватный звонок"),b->this.minecraft.setScreenAndShow(new PrivateCallScreen())).bounds(frame.x(),extraY,extraW,20).build());
       this.addRenderableWidget(Button.builder(Component.literal("Организации"),b->this.minecraft.setScreenAndShow(new OrganizationScreen())).bounds(frame.x()+extraW+4,extraY,extraW,20).build());
       this.addRenderableWidget(Button.builder(Component.literal("Просьбы перезвонить"),b->this.minecraft.setScreenAndShow(new CallbackScreen())).bounds(frame.x()+2*(extraW+4),extraY,extraW,20).build());
 
-      int btnW = Math.max(14, frame.px(16));
-      int btnH = Math.max(12, frame.px(13));
+      int btnW = Math.max(9, frame.px(16));
       int gapX = Math.max(2, frame.px(3));
-      int gapY = Math.max(2, frame.px(3));
+      int gapY = Math.max(1, frame.px(3));
+      int btnH = Math.min(Math.max(9, frame.px(13)),
+         Math.max(1, (frame.px(115) - frame.px(49) - 3 * gapY - 2) / 4));
       int startX = frame.x() + frame.px(18);
       int keypadTop = frame.y() + frame.px(49);
       String[][] layout = new String[][]{{"1", "2", "3", "⌫"}, {"4", "5", "6", "*"}, {"7", "8", "9", "#"}, {"", "0", "", ""}};
@@ -196,9 +197,10 @@ public class PhoneMainScreen extends Screen {
       var redial=Button.builder(Component.literal("Повтор"),b->this.minecraft.setScreenAndShow(new CallCheckScreen(last))).bounds(startX,keypadTop+3*(btnH+gapY),btnW,btnH).build();redial.active=last!=null&&!last.isBlank();this.addTexturedButton(redial);}
       int sideX = frame.x() + frame.px(110);
       int sideY = frame.y() + frame.px(31);
-      int sideW = Math.max(50, frame.px(68));
-      int sideH = Math.max(11, frame.px(12));
-      int sideGap = Math.max(2, frame.px(2));
+      int sideW = Math.max(1, frame.px(68));
+      int sideGap = Math.max(1, frame.px(2));
+      int sideH = Math.min(Math.max(9, frame.px(12)),
+         Math.max(1, (frame.height() - frame.px(31) - 6 * sideGap - 2) / 7));
       int sideRow = 0;
       Button callBtn = Button.builder(Component.translatable(this.addToCallMode ? "phone.add_call.dial" : "phone.screen.call"), b -> this.makeCall())
          .size(sideW, sideH)
@@ -393,7 +395,7 @@ public class PhoneMainScreen extends Screen {
       }
 
       SimpleVoiceCallClient.LOGGER.info("Phone dial {} resolved to {} ({}) using {}", targetNumberRaw, targetUuid, targetName,
-         dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()?"Legacy":"Fox Mobile");
+         dev.yukiinotenshi.simplephonepromax.compat.CallStandard.isLegacy()?"Fox Mobile / Legacy-номер":"Fox Mobile");
       boolean started = dev.yukiinotenshi.simplephonepromax.phone.PhoneDialer.call(targetUuid, targetName, targetNumberRaw);
 
       if ((started || SimpleVoiceCallClient.callManager.getState() == CallState.BUSY) && this.minecraft != null) {
@@ -408,7 +410,7 @@ public class PhoneMainScreen extends Screen {
       }
 
       try {
-         PhoneGuiTextures.Frame frame = PhoneGuiTextures.layout(this.width, this.height);
+         PhoneGuiTextures.Frame frame = PhoneGuiTextures.dialerLayout(this.width, this.height);
          int centerX = frame.centerX();
          Component title = Component.translatable(this.addToCallMode ? "phone.add_call.title" : "phone.screen.phone");
 
@@ -437,19 +439,8 @@ public class PhoneMainScreen extends Screen {
                displayColor = -16711834;
             }
 
-            String visibleNumber = this.font.plainSubstrByWidth(dText.getString(), Math.max(4, displayW - 4));
-            int baseW = this.font.width(visibleNumber);
-            int ty = displayY + (displayH - 8) / 2;
-            int tx = displayX + displayW - baseW - Math.max(2, frame.px(2));
-
-            try {
-               PhoneGuiTextures.drawText(drawContext, this.font, visibleNumber, tx, ty, displayColor, false);
-            } catch (Throwable t) {
-               try {
-                  PhoneGuiTextures.drawText(drawContext, this.font, visibleNumber, tx, ty, displayColor, false);
-               } catch (Throwable var20) {
-               }
-            }
+            PhoneGuiTextures.drawFittedRightText(drawContext, this.font, dText.getString(),
+               displayX + displayW - 2, displayY + displayH / 2, Math.max(1, displayW - 4), displayColor);
          } catch (Throwable var23) {
             Throwable t = var23;
 
